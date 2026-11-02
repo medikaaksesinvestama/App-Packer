@@ -21,9 +21,9 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "97850277752",
   appId: "1:97850277752:web:7fcd0d7b588604389ad28d"
 };
-// Isi dengan alamat Web App Apps Script SETELAH di-deploy (berakhiran /exec).
-// Selama kosong, app menampilkan layar Setup dan meminta alamat itu di tiap HP.
-const GAS_WEB_APP_URL = "";
+// Alamat Web App Apps Script (hasil Deploy, berakhiran /exec). Kalau script di-deploy
+// ulang sebagai "New deployment", alamatnya berubah dan baris ini harus diganti.
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzfa6SxWU1EgokjN9YekGon8H747mcJDqa7ar00oz3quj5VCXwFzoAaHk5Gk5erUrA_uA/exec";
 const SHARED_SECRET = "f1fef4896efb47ec6393b1e929d02a3e"; // harus sama persis dengan SHARED_SECRET di script Apps Script
 </script>
 
@@ -515,11 +515,15 @@ function updateNetPill(){
 /* ============================================================
    AUTH
    ============================================================ */
+// Akun admin dibuat otomatis HANYA kalau accounts/admin belum ada di database.
+// Password awalnya disimpan di sini sebagai hash SHA-256 (bukan teks asli).
+// Kalau akun admin sudah ada di database (mis. dari percobaan sebelumnya),
+// isi file ini tidak mengubahnya.
+const ADMIN_AWAL_HASH = '16bd6f07afa374c777201af2de199ff8f0a6572502f3bc8952f016a7da5f557e';
 async function ensureAdminSeed(){
   const snap = await db.ref('accounts/admin').once('value');
   if(!snap.exists()){
-    const h = await hashPw('admin123');
-    await db.ref('accounts/admin').set({name:'Administrator', password:h, role:'admin', mustChangePw:true, active:true});
+    await db.ref('accounts/admin').set({name:'Administrator', password:ADMIN_AWAL_HASH, role:'admin', mustChangePw:false, active:true});
   }
 }
 async function doLogin(){
