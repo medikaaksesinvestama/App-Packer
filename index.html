@@ -11,11 +11,8 @@
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBd-YjhPH5_XdxVnXmfoJYCqPvLZIDELKY",
   authDomain: "app-packer.firebaseapp.com",
-  // !! PERIKSA BARIS INI !! Alamat Realtime Database tidak ada di konfigurasi yang diberikan.
-  // Buka Firebase Console → Build → Realtime Database: alamatnya tertulis di bagian atas
-  // halaman (diawali https://app-packer-default-rtdb...). Kalau berbeda dari di bawah
-  // (mis. database dibuat di Singapura: ...asia-southeast1.firebasedatabase.app), ganti.
-  databaseURL: "https://app-packer-default-rtdb.firebaseio.com",
+  // Alamat Realtime Database (region Singapura), sesuai yang tertera di Firebase Console.
+  databaseURL: "https://app-packer-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "app-packer",
   storageBucket: "app-packer.firebasestorage.app",
   messagingSenderId: "97850277752",
