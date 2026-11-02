@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Packing Doc</title>
+
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBd-YjhPH5_XdxVnXmfoJYCqPvLZIDELKY",
+  authDomain: "app-packer.firebaseapp.com",
+  // !! PERIKSA BARIS INI !! Alamat Realtime Database tidak ada di konfigurasi yang diberikan.
+  // Buka Firebase Console → Build → Realtime Database: alamatnya tertulis di bagian atas
+  // halaman (diawali https://app-packer-default-rtdb...). Kalau berbeda dari di bawah
+  // (mis. database dibuat di Singapura: ...asia-southeast1.firebasedatabase.app), ganti.
+  databaseURL: "https://app-packer-default-rtdb.firebaseio.com",
+  projectId: "app-packer",
+  storageBucket: "app-packer.firebasestorage.app",
+  messagingSenderId: "97850277752",
+  appId: "1:97850277752:web:7fcd0d7b588604389ad28d"
+};
+// Isi dengan alamat Web App Apps Script SETELAH di-deploy (berakhiran /exec).
+// Selama kosong, app menampilkan layar Setup dan meminta alamat itu di tiap HP.
+const GAS_WEB_APP_URL = "";
+const SHARED_SECRET = "f1fef4896efb47ec6393b1e929d02a3e"; // harus sama persis dengan SHARED_SECRET di script Apps Script
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#f5f3ef;--sf:#fff;--s2:#f0ede8;--bd:#e4dfd8;--bd2:#ccc8c0;
+  --tx:#1a1814;--t2:#6b6460;--t3:#aaa49c;--blk:#1a1814;
+  --g:#166534;--gbg:#f0fdf4;--gbd:#86efac;
+  --am:#92400e;--abg:#fffbeb;--abd:#fcd34d;
+  --re:#991b1b;--rbg:#fef2f2;--rbd:#fca5a5;
+  --bl:#1e3a8a;--bbg:#eff6ff;--bbd:#93c5fd;
+  --pink:#E1004E;--navy:#14152B;
+  --sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--tx);font-family:var(--sans);min-height:100vh;font-size:15px}
+.screen{min-height:100vh;display:none;flex-direction:column;align-items:center;padding:20px}
+.screen.active{display:flex}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:32px 24px;width:100%;max-width:440px;box-shadow:0 4px 32px rgba(0,0,0,.08);margin:auto}
+.brand{font-weight:700;font-size:13px;color:var(--pink);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.ctitle{font-size:20px;font-weight:700;margin-bottom:6px}
+.csub{font-size:13px;color:var(--t2);margin-bottom:20px;line-height:1.5}
+.fl{margin-bottom:12px}
+.fl label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px}
+.fi{width:100%;padding:12px 14px;border:1px solid var(--bd2);border-radius:10px;font-family:var(--sans);font-size:14px;background:var(--s2)}
+textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
+.btn{width:100%;padding:13px;background:var(--blk);color:#fff;border:none;border-radius:10px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}
+.btn.pink{background:var(--pink)}
+.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--bd2)}
+.btn.sm{padding:9px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.err-msg{display:none;color:var(--re);font-size:12.5px;margin-top:10px;background:var(--rbg);border:1px solid var(--rbd);padding:8px 10px;border-radius:8px}
+.err-msg.show{display:block}
+.step-list{padding-left:18px;font-size:12.5px;color:var(--t2);line-height:1.9;margin-bottom:14px}
+.step-list code{background:var(--s2);padding:1px 5px;border-radius:4px;font-family:var(--mono)}
+
+.topbar{position:sticky;top:0;z-index:20;background:var(--sf);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;width:100%}
+.topbar .who{font-size:12.5px;color:var(--t2)}
+.topbar .who b{color:var(--tx)}
+.topbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.icon-btn{background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.net-pill{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px}
+.net-online{background:var(--gbg);color:var(--g);border:1px solid var(--gbd)}
+.net-offline{background:var(--rbg);color:var(--re);border:1px solid var(--rbd)}
+.queue-pill{background:var(--abg);color:var(--am);border:1px solid var(--abd);font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;cursor:pointer}
+/* ── Siapa yang sedang aktif (seperti avatar di Google Sheets) ──
+   Lingkaran inisial yang bertumpuk; yang melebihi batas diringkas jadi "+N". */
+.pres-wrap{display:flex;align-items:center;flex-shrink:0;position:relative}
+.pres-wrap.ada{cursor:pointer;margin-right:2px}
+.pres-avs{display:flex;align-items:center}
+.pres-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:700;color:#fff;border:2px solid var(--sf);margin-left:-8px;
+  font-family:var(--sans);letter-spacing:.2px;box-sizing:border-box}
+.pres-av:first-child{margin-left:0}
+.pres-av.lbh{background:var(--s2);color:var(--t2);font-size:9px}
+.pres-num{display:none;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;
+  padding:3px 8px;border-radius:10px;background:var(--s2);color:var(--t2);border:1px solid var(--bd)}
+/* Sendirian: tetap ditampilkan. Kalau area ini kosong sama sekali, artinya
+   daftar hadir TIDAK sampai ke Firebase — bukan sekadar belum ada rekan. */
+.pres-solo{display:inline-flex;align-items:center;font-family:var(--mono);font-size:9.5px;
+  padding:3px 8px;border-radius:10px;background:transparent;color:var(--t3);border:1px dashed var(--bd)}
+.pres-pop{position:absolute;top:34px;right:0;z-index:300;background:var(--sf);border:1px solid var(--bd);
+  border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:8px;min-width:190px;max-width:260px;
+  max-height:60vh;overflow:auto}
+.pres-pop-h{font-size:10px;color:var(--t3);font-family:var(--mono);padding:2px 6px 7px;letter-spacing:.5px}
+.pres-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:7px}
+.pres-row:hover{background:var(--s2)}
+.pres-row .pres-av{margin-left:0;border:none;width:24px;height:24px}
+.pres-nm{font-size:12px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pres-dv{font-size:10px;color:var(--t3);margin-left:auto;flex-shrink:0}
+@media(max-width:640px){
+  .pres-avs{display:none}
+  .pres-wrap.ada .pres-num{display:inline-flex}
+}
+
+.wrap{width:100%;max-width:640px;padding:16px;margin:0 auto}
+.section{background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:18px;margin-bottom:14px}
+.section h3{font-size:14px;font-weight:700;margin-bottom:10px}
+.scan-row{display:flex;gap:8px}
+.scan-row .fi{flex:1}
+.so-badge{background:var(--navy);color:#fff;border-radius:10px;padding:10px 14px;font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.02em;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.so-badge .chg{font-family:var(--sans);font-size:11.5px;font-weight:600;color:#c7c6d8;cursor:pointer;text-decoration:underline}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px}
+.tab{flex:0 0 auto;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--bd2);background:var(--sf);color:var(--t2);white-space:nowrap}
+.tab.active{background:var(--bl);color:#fff;border-color:var(--bl)}
+.tab.total{background:var(--abg);color:var(--am);border-color:var(--abd)}
+.tab.total.active{background:var(--am);color:#fff;border-color:var(--am)}
+.tab.done::after{content:' ✓';opacity:.7}
+.tab.addkoli{background:var(--s2);color:var(--tx)}
+
+.panel{background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:14px}
+.panel-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.panel-hdr .ttl{font-weight:700;font-size:14.5px}
+.status{font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px}
+.st-open{background:var(--bbg);color:var(--bl);border:1px solid var(--bbd)}
+.st-done{background:var(--gbg);color:var(--g);border:1px solid var(--gbd)}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.thumb{position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;border:1px solid var(--bd2);background:#000}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .lbl{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:10px;text-align:center;padding:2px 0}
+.thumb .del{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;border:none}
+.thumb.seal{border:2px solid var(--g)}
+.thumb{cursor:zoom-in}
+#photo-viewer{display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:220;flex-direction:column;touch-action:pan-y}
+#photo-viewer .pv-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;color:#fff;font-size:13.5px;font-weight:600}
+#photo-viewer .pv-x{background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+#photo-viewer .pv-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;padding:0 6px 14px}
+#photo-viewer .pv-stage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+#photo-viewer .pv-nav{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#photo-viewer .pv-prev{left:8px} #photo-viewer .pv-next{right:8px}
+.actrow{display:flex;gap:8px}
+.actrow .btn{flex:1;margin:0}
+.file-input-hidden{display:none}
+.empty-hint{text-align:center;color:var(--t3);font-size:12.5px;padding:20px 0}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+.acc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd)}
+.acc-row:last-child{border-bottom:none}
+.acc-row .nm{font-size:13.5px;font-weight:500}
+.acc-row .un{font-size:11.5px;color:var(--t2)}
+.del-link{color:var(--re);font-size:12px;font-weight:600;cursor:pointer;background:none;border:none}
+.finish-note{font-size:11.5px;color:var(--t2);text-align:center;margin-top:8px}
+
+#queue-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:230;align-items:flex-start;justify-content:center;padding:18px 12px;overflow:auto}
+#queue-modal .qm-box{background:var(--sf);border-radius:14px;width:100%;max-width:520px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.qm-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.qm-top h3{margin:0;font-size:15px}
+.qm-note{font-size:12px;color:var(--t2);line-height:1.55;margin-bottom:12px}
+.qm-item{border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:9px}
+.qm-item.gagal{border-color:var(--rbd);background:var(--rbg)}
+.qm-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.qm-so{font-family:var(--mono);font-weight:700;font-size:13.5px}
+.qm-meta{font-size:11.5px;color:var(--t2)}
+.qm-st{font-size:12px;line-height:1.5;margin-top:6px;color:var(--t2)}
+.qm-st.err{color:var(--re)}
+.qm-btns{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+.qm-btns button{flex:1;min-width:92px;font-size:12px;font-weight:600;padding:7px 8px;border-radius:8px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx);cursor:pointer}
+.qm-btns button.pri{background:var(--blk);color:#fff;border-color:var(--blk)}
+.qm-btns button.bahaya{color:var(--re);border-color:var(--rbd);background:#fff}
+.qm-btns button:disabled{opacity:.4;cursor:not-allowed}
+#bk-text{min-height:120px;font-family:var(--mono);font-size:12.5px;line-height:1.5;resize:vertical}
+.bk-sum{font-size:13px;font-weight:600;margin:14px 0 6px}
+.bk-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--bd);font-size:12.5px}
+.bk-row .bk-u{font-family:var(--mono);font-weight:700}
+.bk-meta{font-size:11px;color:var(--t2);margin-top:2px}
+.bk-ok{color:var(--g);font-weight:700;white-space:nowrap}
+.bk-bad{color:var(--re);font-size:11.5px;text-align:right;max-width:55%}
+.bk-pw{font-family:var(--mono);font-weight:700;background:var(--s2);border:1px solid var(--bd2);border-radius:6px;padding:2px 7px;letter-spacing:.5px}
+.bk-warn{font-size:11.5px;line-height:1.6;color:var(--am);background:var(--abg);border:1px solid var(--abd);border-radius:8px;padding:9px 11px;margin:8px 0}
+.bk-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.bk-btns .btn{flex:1;min-width:110px;margin:0}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ SETUP SCREEN ══════════════ -->
+<div id="setup-screen" class="screen">
+  <div class="card">
+    <div class="brand">Packing Doc · First Setup</div>
+    <div class="ctitle">Setup Endpoint</div>
+    <div class="csub">Firebase config sudah otomatis terisi. Tinggal isi URL Apps Script setelah Anda deploy.</div>
+    <ol class="step-list">
+      <li>Paste kode Apps Script yang sudah disiapkan ke <code>script.google.com</code> (akun pribadi)</li>
+      <li>Deploy sebagai Web App → <code>Execute as: Me</code>, <code>Who has access: Anyone</code></li>
+      <li>Copy URL hasil deploy, paste di bawah</li>
+    </ol>
+    <div class="fl"><label>Firebase config (sudah terisi)</label>
+      <textarea class="fi" id="su-fc" rows="6"></textarea>
+    </div>
+    <div class="fl"><label>Apps Script Web App URL</label>
+      <input class="fi" id="su-gas" placeholder="https://script.google.com/macros/s/xxx/exec">
+    </div>
+    <div class="fl"><label>Shared Secret (sudah terisi)</label>
+      <input class="fi" id="su-secret">
+    </div>
+    <button class="btn pink" onclick="saveSetup()">Simpan &amp; Lanjutkan</button>
+    <div class="err-msg" id="setup-err"></div>
+  </div>
+</div>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen" class="screen">
+  <div class="card">
+    <div class="brand">Packing Documentation</div>
+    <div class="ctitle">Masuk</div>
+    <div class="csub">Gunakan akun yang diberikan supervisor</div>
+    <div class="fl"><label>Username</label><input class="fi" id="li-u" autocapitalize="none" autocomplete="off"></div>
+    <div class="fl"><label>Password</label><input class="fi" id="li-p" type="password"></div>
+    <button class="btn" onclick="doLogin()">Masuk</button>
+    <div class="err-msg" id="login-err">Username atau password salah</div>
+  </div>
+</div>
+
+<!-- ══════════════ GANTI PASSWORD ══════════════ -->
+<div id="pwchange-screen" class="screen">
+  <div class="card">
+    <div class="brand">Wajib Ganti Password</div>
+    <div class="ctitle">Buat password baru</div>
+    <div class="csub" id="pwchange-label"></div>
+    <div class="fl"><label>Password baru</label><input class="fi" id="pw-new" type="password"></div>
+    <div class="fl"><label>Konfirmasi password baru</label><input class="fi" id="pw-confirm" type="password"></div>
+    <button class="btn pink" onclick="doChangePassword()">Simpan Password</button>
+    <div class="err-msg" id="pwchange-err"></div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="main-screen" class="screen">
+  <div class="topbar">
+    <div class="who">Masuk sebagai <b id="tb-name">-</b></div>
+    <div class="topbar-actions">
+      <div class="pres-wrap" id="pres-wrap" onclick="togglePresensi(event)">
+        <div class="pres-avs" id="pres-avs"></div>
+        <span class="pres-num" id="pres-num"></span>
+      </div>
+      <span class="net-pill net-online" id="net-pill">Online</span>
+      <span class="queue-pill" id="queue-pill" style="display:none" onclick="showQueueDetail()">0 antre</span>
+      <button class="icon-btn" onclick="openCompletedList()">SO Selesai</button>
+      <button class="icon-btn" onclick="openAdmin()" id="btn-admin" style="display:none">Kelola Akun</button>
+      <button class="icon-btn" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="section" id="so-input-section" style="display:none">
+      <h3>Scan / masukkan No. SO</h3>
+      <div class="scan-row">
+        <input class="fi" id="so-input" placeholder="Scan barcode surat jalan atau ketik No. SO" autocomplete="off">
+        <button class="btn sm" style="width:auto;margin:0" onclick="openScanModal()">Scan Kamera</button>
+      </div>
+      <button class="btn pink" style="margin-top:10px" onclick="openSO()">Buka SO</button>
+    </div>
+
+    <div id="so-active-section" style="display:none">
+      <div class="so-badge">
+        <span id="so-active-num">-</span>
+        <span class="chg" onclick="closeSOInput()">Ganti SO</span>
+      </div>
+      <div class="tabs" id="tabs-row"></div>
+      <div id="panel-area"></div>
+      <button class="btn pink" id="btn-finish-so" onclick="finishSO()" disabled>Selesaikan &amp; Kirim SO Ini</button>
+      <div class="finish-note">Aktif jika semua koli sudah disegel dan foto total koli sudah diisi</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ADMIN ══════════════ -->
+<div id="admin-screen" class="screen">
+  <div class="topbar">
+    <div class="who">Kelola Akun Packer</div>
+    <button class="icon-btn" onclick="closeAdmin()">← Kembali</button>
+  </div>
+  <div class="wrap">
+    <div class="section">
+      <h3>Tambah Akun</h3>
+      <div class="fl"><label>Username</label><input class="fi" id="af-user" autocapitalize="none"></div>
+      <div class="fl"><label>Nama Lengkap</label><input class="fi" id="af-name"></div>
+      <div class="fl"><label>Password Awal</label><input class="fi" id="af-pass"></div>
+      <button class="btn pink" onclick="addAccount()">+ Tambah Akun</button>
+    </div>
+    <div class="section" id="bk-section">
+      <h3>Tambah Banyak Akun <span style="font-size:12px;font-weight:500;color:var(--t2)">· massal</span></h3>
+      <div style="font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:10px">
+        Satu akun per baris: <b>username, nama lengkap, password</b>. Password boleh dikosongkan — akan dibuatkan otomatis.
+        Bisa tempel langsung dari Excel (salin kolomnya) atau pilih file CSV. Semua akun baru berperan <b>packer</b> dan wajib ganti password saat login pertama.
+      </div>
+      <textarea class="fi" id="bk-text" spellcheck="false" autocapitalize="none" placeholder="anto, Anto Dwi Prastowo&#10;budi, Budi Santoso, rahasia1"></textarea>
+      <div class="bk-btns">
+        <label class="btn ghost sm" style="text-align:center;cursor:pointer">Pilih file CSV<input type="file" id="bk-file" accept=".csv,.txt,text/csv,text/plain" hidden onchange="bulkFile(this)"></label>
+        <button class="btn ghost sm" onclick="bulkTemplate()">Unduh template</button>
+      </div>
+      <button class="btn pink" style="margin-top:10px" onclick="bulkPreview()">Periksa Data</button>
+      <div id="bk-preview"></div>
+    </div>
+    <div class="section">
+      <h3>Daftar Akun</h3>
+      <div id="acc-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SO SELESAI ══════════════ -->
+<div id="completed-screen" class="screen">
+  <div class="topbar">
+    <div class="who">Daftar SO Selesai Packing</div>
+    <button class="icon-btn" onclick="closeCompletedList()">← Kembali</button>
+  </div>
+  <div class="wrap">
+    <div class="section">
+      <h3>Cari No. SO</h3>
+      <div class="scan-row">
+        <input class="fi" id="cs-search" placeholder="Ketik No. SO persis, lalu Enter" autocomplete="off">
+        <button class="btn sm" style="width:auto;margin:0" onclick="searchCompletedSO()">Cari</button>
+      </div>
+    </div>
+    <div class="section" id="cs-locks-section" style="display:none">
+      <h3>SO Sedang Dikerjakan</h3>
+      <div id="cs-locks-list"></div>
+    </div>
+    <div class="section">
+      <h3>50 SO Terakhir Selesai</h3>
+      <div id="cs-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ EDIT AKUN ══════════════ -->
+<div id="edit-acc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;align-items:center;justify-content:center;padding:18px">
+  <div class="card" style="margin:0;max-width:400px">
+    <div class="ctitle" style="font-size:17px">Edit Akun</div>
+    <div class="csub" id="ea-sub" style="margin-bottom:16px"></div>
+    <div class="fl"><label>Username (tidak bisa diubah)</label>
+      <input class="fi" id="ea-user" disabled style="opacity:.55">
+    </div>
+    <div class="fl"><label>Nama Lengkap</label><input class="fi" id="ea-name"></div>
+    <div class="fl" id="ea-role-wrap"><label>Role</label>
+      <select class="fi" id="ea-role" style="background:var(--s2)">
+        <option value="packer">Packer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div style="font-size:11.5px;color:var(--t2);background:var(--s2);border-radius:8px;padding:9px 11px;line-height:1.6;margin-bottom:12px">
+      Password tidak ikut berubah. Dokumentasi packing yang sudah terkirim tetap memakai nama lama — itu catatan saat pekerjaan terjadi.
+    </div>
+    <div class="actrow">
+      <button class="btn ghost sm" onclick="closeEditAccount()">Batal</button>
+      <button class="btn pink sm" onclick="saveEditAccount()">Simpan</button>
+    </div>
+    <div class="err-msg" id="ea-err"></div>
+  </div>
+</div>
+
+<input type="file" accept="image/*" capture="environment" class="file-input-hidden" id="camera-input">
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════ ANTREAN UPLOAD ══════════════ -->
+<div id="queue-modal" onclick="if(event.target===this)tutupQueuePanel()">
+  <div class="qm-box">
+    <div class="qm-top"><h3 id="qm-title">Antrean upload</h3><button class="icon-btn" onclick="tutupQueuePanel()">Tutup ✕</button></div>
+    <div class="qm-note" id="qm-note"></div>
+    <div id="qm-list"></div>
+    <div class="qm-btns" style="margin-top:4px"><button class="pri" id="qm-all" onclick="coba('all')">Coba kirim semua sekarang</button></div>
+  </div>
+</div>
+
+<!-- ══════════════ PREVIEW FOTO ══════════════ -->
+<div id="photo-viewer" onclick="if(event.target===this||event.target.classList.contains('pv-stage'))closePreview()">
+  <div class="pv-top"><span id="pv-label">-</span><button class="pv-x" onclick="closePreview()">Tutup ✕</button></div>
+  <div class="pv-stage" id="pv-stage">
+    <button class="pv-nav pv-prev" id="pv-prev" onclick="event.stopPropagation();stepPreview(-1)">‹</button>
+    <img id="pv-img" alt="Preview foto">
+    <button class="pv-nav pv-next" id="pv-next" onclick="event.stopPropagation();stepPreview(1)">›</button>
+  </div>
+</div>
+
+<!-- ══════════════ SCAN MODAL (live camera) ══════════════ -->
+<div id="scan-modal" style="display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column">
+  <div style="position:relative;flex:1;overflow:hidden">
+    <video id="scan-video" style="width:100%;height:100%;object-fit:cover" autoplay playsinline muted></video>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
+      <div style="width:78%;max-width:320px;aspect-ratio:1;border:3px solid #fff;border-radius:14px;opacity:.85"></div>
+    </div>
+  </div>
+  <div style="padding:16px;background:#111">
+    <div style="color:#cfcfcf;font-size:12.5px;text-align:center;margin-bottom:10px">Arahkan barcode ke dalam kotak, tahan sampai terbaca otomatis</div>
+    <button class="btn ghost" style="color:#fff;border-color:#444" onclick="closeScanModal()">Batal</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STATE & UTIL
+   ============================================================ */
+let db = null;
+let session = null;
+let currentSO = null;
+let koliState = {};       // {1:{status:'open'|'done', photos:[{id,dataUrl,w,h}]}}
+let totalKoliPhotos = [];
+let koliCounter = 0;
+let activeTab = null;     // 'koli-1' | 'total'
+let cameraTarget = null;  // {scope:'layer'|'seal'|'total', koli}
+const _loginFails = {};
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+async function hashPw(pw){
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){ return pw; }
+}
+async function verifyPw(stored, input){
+  if(!stored || !input) return 'fail';
+  const hashed = await hashPw(input);
+  if(stored === hashed) return 'ok';
+  if(stored === input) return 'upgrade';
+  return 'fail';
+}
+
+/* ============================================================
+   NOMOR SO — BENTUK BAKU
+   Nomor SO bisa tertulis dengan atau tanpa nol di depan, dan "0105387"
+   serta "105387" adalah SO yang SAMA. App ini dulu hanya membuang
+   karakter aneh, jadi dua bentuk itu tersimpan sebagai dua SO berbeda
+   dan pengaman "sudah pernah dipacking" bisa lolos.
+   Sekarang nol di depan ikut dibuang untuk nomor yang semuanya angka.
+   ============================================================ */
+// Bentuk-bentuk lain dari satu nomor SO yang mungkin tersimpan di data lama.
+function _soVarian(so){
+  const out = {}; const s = String(so||'');
+  out[s] = 1;
+  if(/^\d+$/.test(s)){ for(let n=1;n<=3;n++) out['0'.repeat(n)+s] = 1; }
+  return out;
+}
+function soKanonik(v){
+  let s = String(v==null?'':v).trim().toUpperCase().replace(/[^A-Z0-9-]/g,'');
+  if(s && /^\d+$/.test(s)) s = String(Number(s));
+  return s;
+}
+
+/* ============================================================
+   UMUR (dipakai panel antrean upload)
+   ============================================================ */
+function fmtUmur(ms){
+  const m = Math.max(0, Math.floor(ms/60000));
+  if(m < 60) return m+' menit lalu';
+  const j = Math.floor(m/60);
+  if(j < 24) return j+' jam lalu';
+  return Math.floor(j/24)+' hari lalu';
+}
+
+/* ============================================================
+   SETUP / INIT
+   ============================================================ */
+function getLocalCfg(){ try{ return JSON.parse(localStorage.getItem('pd_cfg')||'null'); }catch(e){ return null; } }
+function saveSetup(){
+  const errEl = document.getElementById('setup-err');
+  errEl.classList.remove('show');
+  let fc;
+  try{ fc = JSON.parse(document.getElementById('su-fc').value); }
+  catch(e){ errEl.textContent='Format JSON Firebase config tidak valid.'; errEl.classList.add('show'); return; }
+  const gasUrl = document.getElementById('su-gas').value.trim();
+  const secret = document.getElementById('su-secret').value.trim();
+  if(!gasUrl || !secret){ errEl.textContent='URL Apps Script dan Shared Secret wajib diisi.'; errEl.classList.add('show'); return; }
+  localStorage.setItem('pd_cfg', JSON.stringify({fc, gasUrl, secret}));
+  location.reload();
+}
+function initApp(){
+  const cfg = (FIREBASE_CONFIG.databaseURL ? {fc:FIREBASE_CONFIG, gasUrl:GAS_WEB_APP_URL, secret:SHARED_SECRET} : getLocalCfg());
+  if(!cfg || !cfg.fc || !cfg.fc.databaseURL || !cfg.gasUrl){
+    showScreen('setup-screen');
+    if(FIREBASE_CONFIG.databaseURL) document.getElementById('su-fc').value = JSON.stringify(FIREBASE_CONFIG, null, 2);
+    if(SHARED_SECRET) document.getElementById('su-secret').value = SHARED_SECRET;
+    return;
+  }
+  window._cfg = cfg;
+  firebase.initializeApp(cfg.fc);
+  db = firebase.database();
+  pantauKoneksiPresensi();
+  mulaiPantauIdle();
+  initQueueDB().then(()=>{ resumeSessionIfAny(); processQueue(); });
+  window.addEventListener('online', ()=>{ updateNetPill(); processQueue(); });
+  window.addEventListener('offline', updateNetPill);
+  updateNetPill();
+  setInterval(()=>processQueue(), 20000);
+}
+function updateNetPill(){
+  const p = document.getElementById('net-pill');
+  if(navigator.onLine){ p.textContent='Online'; p.className='net-pill net-online'; }
+  else { p.textContent='Offline'; p.className='net-pill net-offline'; }
+}
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+async function ensureAdminSeed(){
+  const snap = await db.ref('accounts/admin').once('value');
+  if(!snap.exists()){
+    const h = await hashPw('admin123');
+    await db.ref('accounts/admin').set({name:'Administrator', password:h, role:'admin', mustChangePw:true, active:true});
+  }
+}
+async function doLogin(){
+  const u = document.getElementById('li-u').value.trim().toLowerCase();
+  const p = document.getElementById('li-p').value;
+  const errEl = document.getElementById('login-err');
+  errEl.classList.remove('show');
+  if(!u || !p) return;
+  if((_loginFails[u]||0) >= 6){ errEl.textContent='Terlalu banyak percobaan gagal. Coba lagi 5 menit lagi.'; errEl.classList.add('show'); return; }
+  await ensureAdminSeed();
+  const snap = await db.ref('accounts/'+u).once('value');
+  const acc = snap.val();
+  if(!acc){ _loginFails[u]=(_loginFails[u]||0)+1; errEl.textContent='Username atau password salah'; errEl.classList.add('show'); return; }
+  if(acc.active === false){ errEl.textContent='Akun tidak aktif. Hubungi admin.'; errEl.classList.add('show'); return; }
+  const result = await verifyPw(acc.password, p);
+  if(result === 'fail'){
+    _loginFails[u]=(_loginFails[u]||0)+1;
+    if(_loginFails[u] >= 6){ errEl.textContent='Terlalu banyak percobaan gagal. Coba lagi 5 menit lagi.'; setTimeout(()=>{ _loginFails[u]=0; }, 5*60*1000); }
+    else { errEl.textContent='Username atau password salah ('+(6-_loginFails[u])+' percobaan tersisa)'; }
+    errEl.classList.add('show'); return;
+  }
+  _loginFails[u] = 0;
+  if(result === 'upgrade'){ await db.ref('accounts/'+u).update({password: await hashPw(p)}); }
+  session = {username:u, name:acc.name, role:acc.role||'packer'};
+  localStorage.setItem('pd_session', JSON.stringify(session));
+  if(acc.mustChangePw){
+    document.getElementById('pwchange-label').textContent = acc.name+' (@'+u+') — buat password baru sebelum lanjut';
+    showScreen('pwchange-screen'); return;
+  }
+  enterMain();
+}
+async function doChangePassword(){
+  const np = document.getElementById('pw-new').value;
+  const cp = document.getElementById('pw-confirm').value;
+  const errEl = document.getElementById('pwchange-err');
+  errEl.classList.remove('show');
+  if(np.length < 4){ errEl.textContent='Password minimal 4 karakter'; errEl.classList.add('show'); return; }
+  if(np !== cp){ errEl.textContent='Konfirmasi password tidak sama'; errEl.classList.add('show'); return; }
+  await db.ref('accounts/'+session.username).update({password: await hashPw(np), mustChangePw:false});
+  showToast('Password berhasil diubah');
+  enterMain();
+}
+function resumeSessionIfAny(){
+  try{ session = JSON.parse(localStorage.getItem('pd_session')||'null'); }catch(e){ session=null; }
+  if(session){ enterMain(); } else { showScreen('login-screen'); }
+}
+function doLogout(otomatis){
+  // Lepas kunci SO yang sedang dipegang (perbaikan bug: dulu logout membiarkan
+  // SO terkunci sampai TTL 30 menit habis).
+  if(currentSO && db){ db.ref('locks/'+currentSO).remove().catch(()=>{}); }
+  stopHB();
+  hapusPresensi(); stopDengarPresensi();
+  localStorage.removeItem('pd_session');
+  bulkReset();
+  setManualBox(false);
+  // clearProgress() SENGAJA tidak dipanggil: foto yang belum terkirim harus
+  // selamat melewati logout dan dipulihkan restoreProgressIfAny().
+  session=null; currentSO=null; koliState={}; totalKoliPhotos=[];
+  _presData={}; renderPresensi();
+  resetIdle();
+  const le = document.getElementById('login-err');
+  if(le && !otomatis){ le.classList.remove('show'); }
+  showScreen('login-screen');
+}
+function enterMain(){
+  document.getElementById('tb-name').textContent = session.name+' (@'+session.username+')';
+  document.getElementById('btn-admin').style.display = session.role==='admin' ? 'inline-block' : 'none';
+  showScreen('main-screen');
+  setManualBox(true);
+  renderQueuePill();
+  daftarkanPresensi();
+  resetIdle();
+  restoreProgressIfAny();
+}
+async function restoreProgressIfAny(){
+  const prog = await loadProgress();
+  if(!prog || prog.username !== session.username) return;
+  try{
+    const lk = (await db.ref('locks/'+prog.so).once('value')).val();
+    if(lk && lk.by !== session.username && (Date.now()-lk.at) < LOCK_TTL){
+      showToast('SO '+prog.so+' yang sempat Anda kerjakan sekarang dipegang '+(lk.name||'tim lain')+'. Foto Anda masih tersimpan.');
+      return;
+    }
+  }catch(e){ /* tidak bisa memeriksa -> lanjut seperti perilaku lama */ }
+  currentSO = prog.so;
+  koliState = prog.koliState || {};
+  totalKoliPhotos = prog.totalKoliPhotos || [];
+  koliCounter = prog.koliCounter || Object.keys(koliState).length;
+  activeTab = prog.activeTab || ('koli-'+(Object.keys(koliState)[0]||1));
+  document.getElementById('so-active-num').textContent = currentSO;
+  setManualBox(false);
+  document.getElementById('so-active-section').style.display='block';
+  await db.ref('locks/'+currentSO).set({by:session.username, name:session.name, at:Date.now()});
+  startHB(currentSO);
+  renderAll();
+  showToast('Melanjutkan SO '+currentSO+' yang sempat terhenti sebelumnya.');
+}
+
+/* ============================================================
+   ADMIN — KELOLA AKUN
+   ============================================================ */
+function openAdmin(){ showScreen('admin-screen'); loadAccounts(); }
+function closeAdmin(){ bulkReset(); showScreen('main-screen'); }
+/* ── TAMBAH AKUN MASSAL ───────────────────────────────────────────
+   Alur: tempel/pilih daftar → "Periksa Data" (belum menulis apa pun, hanya
+   memeriksa & menampilkan hasil per baris) → "Buat N akun". Hanya admin.
+   Akun yang sudah ada TIDAK PERNAH ditimpa (dicek lagi saat menulis, lewat
+   transaction, kalau ada yang membuat username yang sama di tengah proses). */
+const BK_MAKS = 200;
+const BK_SANDI = 'abcdefghjkmnpqrstuvwxyz23456789';   // tanpa i,l,o,0,1 supaya tidak tertukar saat dibaca
+let _bkRows = [], _bkHasil = [], _bkJalan = false;
+
+function _bkSandiAcak(n){
+  const a = new Uint32Array(n); crypto.getRandomValues(a);
+  return Array.from(a, v => BK_SANDI[v % BK_SANDI.length]).join('');
+}
+// Satu baris -> kolom. Pemisah dikenali otomatis: tab (tempel dari Excel), titik-koma, atau koma.
+function _bkBagi(line){
+  const delim = line.indexOf('\t') >= 0 ? '\t' : (line.split(';').length > line.split(',').length ? ';' : ',');
+  const out = []; let cur = '', q = false;
+  for(let i=0; i<line.length; i++){
+    const c = line[i];
+    if(q){ if(c === '"'){ if(line[i+1] === '"'){ cur += '"'; i++; } else q = false; } else cur += c; }
+    else if(c === '"' && cur === '') q = true;
+    else if(c === delim){ out.push(cur.trim()); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
+function _bkParse(teks){
+  const rows = [];
+  String(teks||'').replace(/^\uFEFF/,'').split(/\r\n|\r|\n/).forEach((raw, idx)=>{
+    if(!raw.trim()) return;
+    const k = _bkBagi(raw);
+    if(!rows.length && /^(user ?name)$/i.test(k[0])) return;      // baris judul
+    rows.push({baris: idx+1, u:(k[0]||'').toLowerCase(), n:(k[1]||'').replace(/\s+/g,' '), p:(k[2]||'')});
+  });
+  return rows;
+}
+function _bkValidasi(rows, sudahAda){
+  const pertama = {};
+  rows.forEach(r=>{
+    r.err = null;
+    if(!r.u) r.err = 'username kosong';
+    else if(!/^[a-z0-9_-]{2,30}$/.test(r.u)) r.err = 'username hanya huruf kecil, angka, _ atau - (2–30 karakter)';
+    else if(r.u === 'admin') r.err = 'username "admin" dicadangkan';
+    else if(sudahAda.has(r.u)) r.err = 'username sudah dipakai';
+    else if(pertama[r.u]) r.err = 'username dobel dengan baris ' + pertama[r.u];
+    else if(!r.n) r.err = 'nama kosong';
+    else if(r.n.length > 60) r.err = 'nama terlalu panjang (maks 60 huruf)';
+    else if(r.p && r.p.length < 4) r.err = 'password minimal 4 karakter';
+    if(r.u && !pertama[r.u]) pertama[r.u] = r.baris;
+  });
+}
+function _bkAdmin(){
+  if(session && session.role === 'admin') return true;
+  showToast('Hanya admin yang bisa menambah akun massal.'); return false;
+}
+async function bulkPreview(){
+  if(!_bkAdmin()) return;
+  const rows = _bkParse(document.getElementById('bk-text').value);
+  if(!rows.length){ showToast('Belum ada data. Tempel daftar akun atau pilih file CSV.'); return; }
+  if(rows.length > BK_MAKS){ showToast('Maksimal '+BK_MAKS+' akun sekali proses (terbaca '+rows.length+'). Pecah jadi beberapa bagian.'); return; }
+  let ada;
+  try{ const snap = await db.ref('accounts').once('value'); ada = new Set(Object.keys(snap.val() || {})); }
+  catch(e){ showToast('Gagal membaca daftar akun: '+((e && e.message) || e)); return; }
+  _bkValidasi(rows, ada);
+  _bkRows = rows; _bkHasil = [];
+  _bkRender();
+}
+function _bkRender(){
+  const el = document.getElementById('bk-preview'); if(!el) return;
+  if(_bkHasil.length){
+    const dibuat = _bkHasil.filter(x=>x.status==='dibuat'), lain = _bkHasil.filter(x=>x.status!=='dibuat');
+    el.innerHTML = '<div class="bk-sum">' + dibuat.length + ' akun dibuat' + (lain.length ? ' · ' + lain.length + ' tidak dibuat' : '') + '</div>'
+      + (dibuat.length ? '<div class="bk-warn"><b>Catat atau unduh password awal sekarang.</b> Password disimpan terenkripsi sehingga tidak bisa dilihat lagi. Packer wajib menggantinya saat login pertama. Daftar ini hilang dari layar saat Anda menekan Selesai.</div>' : '')
+      + dibuat.map(x=>'<div class="bk-row"><div><span class="bk-u">@' + esc(x.u) + '</span><div class="bk-meta">' + esc(x.n) + '</div></div><span class="bk-pw">' + esc(x.p) + '</span></div>').join('')
+      + lain.map(x=>'<div class="bk-row"><div><span class="bk-u">@' + esc(x.u) + '</span><div class="bk-meta">' + esc(x.n) + '</div></div><span class="bk-bad">' + esc(x.ket) + '</span></div>').join('')
+      + '<div class="bk-btns">' + (dibuat.length ? '<button class="btn sm" onclick="bulkUnduh()">Unduh CSV</button><button class="btn ghost sm" onclick="bulkSalin()">Salin</button>' : '')
+      + '<button class="btn ghost sm" onclick="bulkReset()">Selesai</button></div>';
+    return;
+  }
+  if(!_bkRows.length){ el.innerHTML = ''; return; }
+  const ok = _bkRows.filter(r=>!r.err).length, bad = _bkRows.length - ok;
+  el.innerHTML = '<div class="bk-sum"><span class="bk-ok">' + ok + ' siap dibuat</span>' + (bad ? ' · <span style="color:var(--re)">' + bad + ' dilewati</span>' : '') + '</div>'
+    + _bkRows.map(r=>'<div class="bk-row"><div><span class="bk-u">@' + esc(r.u || '—') + '</span><div class="bk-meta">' + esc(r.n || '(tanpa nama)') + ' · ' + (r.p ? 'password dari data' : 'password dibuat otomatis') + ' · baris ' + r.baris + '</div></div>'
+      + (r.err ? '<span class="bk-bad">' + esc(r.err) + '</span>' : '<span class="bk-ok">✓</span>') + '</div>').join('')
+    + '<div class="bk-btns"><button class="btn pink" ' + (ok ? '' : 'disabled style="opacity:.4"') + ' onclick="bulkCommit()">Buat ' + ok + ' akun</button>'
+    + '<button class="btn ghost" onclick="bulkReset()">Batal</button></div>';
+}
+async function bulkCommit(){
+  if(!_bkAdmin() || _bkJalan) return;
+  const siap = _bkRows.filter(r=>!r.err);
+  if(!siap.length) return;
+  _bkJalan = true;
+  const hasil = [], el = document.getElementById('bk-preview');
+  try{
+    for(let i=0; i<siap.length; i++){
+      const r = siap[i];
+      if(el) el.innerHTML = '<div class="bk-sum">Membuat akun ' + (i+1) + ' dari ' + siap.length + '…</div>';
+      const pw = r.p || _bkSandiAcak(8);
+      const data = {name:r.n, password: await hashPw(pw), role:'packer', mustChangePw:true, active:true};
+      try{
+        // Hanya menulis kalau username MASIH kosong — tidak pernah menimpa akun orang lain.
+        const res = await db.ref('accounts/'+r.u).transaction(cur => cur === null ? data : undefined);
+        hasil.push(res.committed ? {u:r.u, n:r.n, p:pw, status:'dibuat'}
+                                 : {u:r.u, n:r.n, status:'dilewati', ket:'username baru saja dipakai'});
+      }catch(e){
+        hasil.push({u:r.u, n:r.n, status:'gagal', ket:((e && e.message) || String(e))});
+      }
+    }
+  } finally { _bkJalan = false; }
+  _bkHasil = hasil; _bkRows = [];
+  const ta = document.getElementById('bk-text'); if(ta) ta.value = '';
+  _bkRender(); loadAccounts();
+}
+function _bkCsv(v){ v = String(v); return /[",;\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function _bkUnduhTeks(nama, teks){
+  const url = URL.createObjectURL(new Blob(['\uFEFF'+teks], {type:'text/csv;charset=utf-8'}));
+  const a = document.createElement('a'); a.href = url; a.download = nama;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+}
+function bulkTemplate(){
+  _bkUnduhTeks('template-akun-packer.csv', 'username,nama,password\r\nanto,Anto Dwi Prastowo,\r\nbudi,Budi Santoso,rahasia1\r\n');
+}
+function bulkUnduh(){
+  const d = _bkHasil.filter(x=>x.status==='dibuat'); if(!d.length) return;
+  _bkUnduhTeks('akun-packer-baru.csv', 'username,nama,password_awal\r\n' + d.map(x=>[x.u,x.n,x.p].map(_bkCsv).join(',')).join('\r\n') + '\r\n');
+}
+async function bulkSalin(){
+  const t = _bkHasil.filter(x=>x.status==='dibuat').map(x=>x.u+'\t'+x.n+'\t'+x.p).join('\n');
+  try{ await navigator.clipboard.writeText(t); showToast('Daftar disalin.'); }
+  catch(e){ showToast('Tidak bisa menyalin otomatis — pakai Unduh CSV.'); }
+}
+async function bulkFile(inp){
+  const f = inp.files && inp.files[0]; inp.value = '';
+  if(!f) return;
+  if(/\.(xlsx|xls)$/i.test(f.name)){ showToast('File Excel belum bisa dibaca langsung. Simpan sebagai CSV (Save As → CSV), atau salin kolomnya dari Excel lalu tempel di kotak.'); return; }
+  if(f.size > 1024*1024){ showToast('File terlalu besar untuk daftar akun.'); return; }
+  document.getElementById('bk-text').value = await f.text();
+  bulkPreview();
+}
+// Bersihkan semuanya — termasuk password awal yang tampil di layar.
+function bulkReset(){
+  _bkRows = []; _bkHasil = [];
+  const ta = document.getElementById('bk-text'); if(ta) ta.value = '';
+  const el = document.getElementById('bk-preview'); if(el) el.innerHTML = '';
+}
+
+async function addAccount(){
+  const u = document.getElementById('af-user').value.trim().toLowerCase();
+  const n = document.getElementById('af-name').value.trim();
+  const p = document.getElementById('af-pass').value;
+  if(!u || !n || !p){ showToast('Lengkapi semua field'); return; }
+  const exist = await db.ref('accounts/'+u).once('value');
+  if(exist.exists()){ showToast('Username sudah dipakai'); return; }
+  await db.ref('accounts/'+u).set({name:n, password: await hashPw(p), role:'packer', mustChangePw:true, active:true});
+  document.getElementById('af-user').value=''; document.getElementById('af-name').value=''; document.getElementById('af-pass').value='';
+  showToast('Akun ditambahkan'); loadAccounts();
+}
+async function loadAccounts(){
+  const snap = await db.ref('accounts').once('value');
+  const accs = snap.val() || {};
+  const el = document.getElementById('acc-list');
+  el.innerHTML = Object.entries(accs).map(([u,a])=>{
+    const isActive = a.active !== false;
+    return `
+    <div class="acc-row">
+      <div><div class="nm">${esc(a.name)} ${isActive?'':'<span style="color:var(--re);font-size:11px;font-weight:600">(nonaktif)</span>'}</div><div class="un">@${esc(u)}</div></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+        <button class="del-link" style="color:var(--bl)" onclick="editAccount('${esc(u)}')">Edit</button>
+        ${u!=='admin' ? `
+        <button class="del-link" style="color:var(--am)" onclick="resetAccountPw('${esc(u)}')">Reset PW</button>
+        <button class="del-link" style="color:${isActive?'var(--re)':'var(--g)'}" onclick="toggleActiveAccount('${esc(u)}', ${isActive})">${isActive?'Nonaktifkan':'Aktifkan'}</button>
+        <button class="del-link" onclick="delAccount('${esc(u)}')">Hapus</button>` : ''}
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-hint">Belum ada akun</div>';
+}
+/* ── EDIT AKUN ──────────────────────────────────────────────
+   Username TIDAK bisa diubah: itu kunci node accounts/{username},
+   dan juga dipakai sebagai alamat daftar hadir & pemilik riwayat packing.
+   Nama lengkap dan role boleh diperbaiki kapan saja.
+   ─────────────────────────────────────────────────────────── */
+let _eaUser = null;
+async function editAccount(u){
+  const snap = await db.ref('accounts/'+u).once('value');
+  const a = snap.val();
+  if(!a){ showToast('Akun tidak ditemukan'); return; }
+  _eaUser = u;
+  document.getElementById('ea-sub').textContent = '@'+u;
+  document.getElementById('ea-user').value = u;
+  document.getElementById('ea-name').value = a.name || '';
+  document.getElementById('ea-role').value = a.role || 'packer';
+  // Akun "admin" adalah akun sistem app ini — role-nya dikunci supaya
+  // tidak ada yang tidak sengaja mengubahnya dan kehilangan akses kelola.
+  const kunciRole = (u === 'admin');
+  document.getElementById('ea-role').disabled = kunciRole;
+  document.getElementById('ea-role').style.opacity = kunciRole ? '.55' : '1';
+  document.getElementById('ea-err').classList.remove('show');
+  document.getElementById('edit-acc-modal').style.display = 'flex';
+}
+function closeEditAccount(){
+  document.getElementById('edit-acc-modal').style.display = 'none';
+  _eaUser = null;
+}
+async function saveEditAccount(){
+  const u = _eaUser; if(!u) return;
+  const errEl = document.getElementById('ea-err');
+  errEl.classList.remove('show');
+  const nama = document.getElementById('ea-name').value.trim();
+  const role = document.getElementById('ea-role').disabled
+    ? null                                    // akun admin: role tidak ikut ditulis
+    : document.getElementById('ea-role').value;
+  if(!nama){ errEl.textContent='Nama lengkap tidak boleh kosong'; errEl.classList.add('show'); return; }
+  if(role && role !== 'admin' && session && u === session.username){
+    errEl.textContent='Tidak bisa menurunkan role akun sendiri.'; errEl.classList.add('show'); return;
+  }
+  const ubah = {name: nama};
+  if(role) ubah.role = role;
+  await db.ref('accounts/'+u).update(ubah);
+  if(session && u === session.username){
+    session.name = nama;
+    if(role) session.role = role;
+    localStorage.setItem('pd_session', JSON.stringify(session));
+    const tb = document.getElementById('tb-name');
+    if(tb) tb.textContent = session.name + ' (@' + session.username + ')';
+    document.getElementById('btn-admin').style.display = session.role==='admin' ? 'inline-block' : 'none';
+  }
+  closeEditAccount();
+  showToast('Akun @'+u+' diperbarui');
+  loadAccounts();
+}
+
+async function resetAccountPw(u){
+  const np = prompt('Password baru untuk @'+u+':');
+  if(!np) return;
+  if(np.length < 4){ showToast('Password minimal 4 karakter'); return; }
+  await db.ref('accounts/'+u).update({password: await hashPw(np), mustChangePw:true});
+  showToast('Password @'+u+' direset.');
+}
+async function toggleActiveAccount(u, isActive){
+  const label = isActive ? 'nonaktifkan' : 'aktifkan';
+  if(!confirm('Yakin mau '+label+' akun @'+u+'?')) return;
+  await db.ref('accounts/'+u).update({active: !isActive});
+  showToast('Akun @'+u+' di-'+label); loadAccounts();
+}
+async function delAccount(u){
+  if(!confirm('Hapus PERMANEN akun @'+u+'? Riwayat packing lama tidak berubah, tapi akun tidak bisa dipulihkan. Untuk keluar tim sementara, pakai "Nonaktifkan".')) return;
+  await db.ref('accounts/'+u).remove(); loadAccounts();
+}
+
+/* ============================================================
+   SO / TAB / KOLI
+   ============================================================ */
+function setManualBox(show){
+  const el = document.getElementById('so-input-section');
+  if(el) el.style.display = (show && session) ? 'block' : 'none';
+}
+function openSO(){
+  const v = document.getElementById('so-input').value.trim();
+  if(!v){ showToast('Masukkan No. SO dulu'); return; }
+  proceedOpenSO(soKanonik(v));
+}
+async function proceedOpenSO(so){
+  showToast('Mengecek status SO...');
+  // Record lama mungkin tersimpan dengan nol di depan ("0105387") dari sebelum
+  // nomor SO dibakukan. Keduanya diperiksa supaya pengaman "sudah pernah
+  // dipacking" tidak jebol untuk data lama.
+  let completed = (await db.ref('completedSO/'+so).once('value')).val();
+  if(!completed){
+    const lain = Object.keys(_soVarian(so)).filter(k=>k!==so);
+    for(const k of lain){
+      const v = (await db.ref('completedSO/'+k).once('value')).val();
+      if(v){ completed = v; break; }
+    }
+  }
+  if(completed){
+    if(session.role !== 'admin'){
+      showToast('SO '+so+' sudah selesai dipacking oleh '+completed.packerName+'. Tidak bisa diulang — hubungi admin.');
+      return;
+    }
+    if(!confirm('SO '+so+' sudah pernah selesai dipacking oleh '+completed.packerName+'. Anda admin — tetap mau packing ulang?')) return;
+  }
+  const lockSnap = await db.ref('locks/'+so).once('value');
+  const existingLock = lockSnap.val();
+  if(existingLock && existingLock.by !== session.username && (Date.now()-existingLock.at) < LOCK_TTL){
+    showToast('SO '+so+' sedang dikerjakan oleh '+(existingLock.name||'Tim lain')+'. Tunggu sampai selesai.');
+    return;
+  }
+  await db.ref('locks/'+so).set({by:session.username, name:session.name, at:Date.now()});
+  startHB(so);
+
+  currentSO = so;
+  koliState = {}; koliCounter = 0; totalKoliPhotos = [];
+  document.getElementById('so-active-num').textContent = currentSO;
+  setManualBox(false);
+  document.getElementById('so-active-section').style.display='block';
+  document.getElementById('so-input').value='';
+  addKoli();
+}
+function closeSOInput(){
+  if((Object.keys(koliState).length || totalKoliPhotos.length) && !confirm('SO ini belum dikirim. Yakin mau ganti tanpa submit? Foto yang sudah diambil akan hilang.')) return;
+  if(currentSO){ db.ref('locks/'+currentSO).remove().catch(()=>{}); stopHB(); }
+  currentSO=null; koliState={}; totalKoliPhotos=[];
+  clearProgress();
+  document.getElementById('so-active-section').style.display='none';
+  setManualBox(true);
+}
+
+/* ============================================================
+   SIAPA YANG SEDANG AKTIF (daftar hadir)
+
+   Cara kerjanya:
+   onDisconnect() — BUKAN heartbeat. Server Firebase sendiri yang menghapus
+   entri begitu socket-nya putus, jadi app tidak perlu melapor "saya masih di
+   sini" tiap menit. Bedanya besar untuk kuota: heartbeat 1 menit sifatnya N×N
+   (tiap orang mengabari semua orang), sedangkan login/logout hanya sekali.
+
+   Disimpan per KONEKSI — presence/{username}/{idKoneksi} — bukan per user,
+   supaya satu packer yang membuka app di HP dan di PC tetap terhitung satu
+   orang, tapi menutup salah satunya tidak menghapus yang lain.
+
+   Daftar ini hanya berisi sesama pengguna app packer ini.
+   ============================================================ */
+const _presId = 'p' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+let _presData = {};        // username -> { idKoneksi: {n,t,d} }
+let _presRef = null;
+let _presListen = false;
+const _PRES_MAKS = 4;      // lingkaran yang ditampilkan sebelum diringkas jadi "+N"
+
+// "BUDI SUSANTO" → "BS" · "ALIANSYAH" → "AL" · kosong → "?"
+function _inisial(nama){
+  const w = String(nama||'').trim().split(/\s+/).filter(Boolean);
+  if(!w.length) return '?';
+  if(w.length===1) return (w[0].slice(0,2) || '?').toUpperCase();
+  return (w[0].charAt(0) + w[1].charAt(0)).toUpperCase();
+}
+// Warna tetap per orang — diturunkan dari username, bukan diacak, supaya
+// orang yang sama selalu berwarna sama di semua perangkat.
+function _warnaDari(kunci){
+  const s = String(kunci||''); let h = 0;
+  for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
+  return 'hsl(' + (h % 360) + ',48%,42%)';
+}
+function _perangkat(){
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'') ? 'hp' : 'pc';
+}
+
+function daftarkanPresensi(){
+  if(!db || !session || !session.username) return;
+  try{
+    _presRef = db.ref('presence/' + session.username + '/' + _presId);
+    // Urutannya WAJIB begini: daftarkan dulu penghapusannya, baru tulis. Kalau
+    // dibalik dan koneksi putus tepat di antaranya, entrinya tertinggal abadi.
+    // Kegagalan di sini TIDAK boleh menghentikan app, tapi juga tidak boleh
+    // ditelan diam-diam — penyebab tersering adalah node "presence" belum
+    // diizinkan di Firebase Rules, dan itu hanya kelihatan dari pesan ini.
+    _presRef.onDisconnect().remove()
+      .then(()=> _presRef.set({n: session.name || session.username, t: Date.now(), d: _perangkat()}))
+      .then(()=> console.log('[PRESENCE] terdaftar:', session.username))
+      .catch(e=> console.warn('[PRESENCE] gagal menulis — cek Firebase Rules node "presence":', e && e.message));
+    dengarPresensi();
+  }catch(e){ console.warn('[PRESENCE] gagal mendaftar:', e && e.message); }
+}
+
+function dengarPresensi(){
+  if(_presListen || !db) return;
+  _presListen = true;
+  const r = db.ref('presence');
+  // child_added/changed/removed, BUKAN on('value'): yang dikirim hanya anak
+  // yang berubah, bukan seluruh daftar.
+  // Argumen ketiga = callback error. Tanpa ini, penolakan Rules lewat tanpa
+  // jejak sama sekali dan fiturnya terlihat "diam saja" padahal ditolak server.
+  const gagal = e => console.warn('[PRESENCE] tidak bisa membaca node "presence" — cek Firebase Rules:', e && e.message);
+  r.on('child_added',   s => { _presData[s.key] = s.val(); renderPresensi(); }, gagal);
+  r.on('child_changed', s => { _presData[s.key] = s.val(); renderPresensi(); }, gagal);
+  r.on('child_removed', s => { delete _presData[s.key];    renderPresensi(); }, gagal);
+}
+
+function stopDengarPresensi(){
+  try{ if(db) db.ref('presence').off(); }catch(e){}
+  _presListen = false;
+}
+
+function hapusPresensi(){
+  try{
+    if(_presRef){ _presRef.onDisconnect().cancel(); _presRef.remove().catch(()=>{}); _presRef = null; }
+  }catch(e){}
+}
+
+// Tiap kali koneksi PULIH, pendaftaran onDisconnect harus dipasang ULANG —
+// pendaftaran itu melekat pada satu koneksi, dan koneksi lama sudah mati.
+// Kalau dilewatkan, nama packer tertinggal selamanya di daftar aktif.
+// Pill "Online/Offline" yang sudah ada TIDAK disentuh: itu memakai
+// navigator.onLine dan tetap berperilaku seperti sebelumnya.
+let _dbPernahTersambung = false;
+function pantauKoneksiPresensi(){
+  if(!db) return;
+  try{
+    db.ref('.info/connected').on('value', snap => {
+      if(snap.val()) _dbPernahTersambung = true;
+      if(snap.val() && session) daftarkanPresensi();
+    });
+    // Penyebab paling umum kalau app "diam saja": databaseURL di bagian atas file salah.
+    setTimeout(()=>{
+      if(!_dbPernahTersambung && navigator.onLine){
+        console.warn('[DB] belum tersambung ke Realtime Database — periksa databaseURL di FIREBASE_CONFIG.');
+        showToast('Tidak bisa tersambung ke database. Periksa alamat databaseURL di bagian atas file (lihat Firebase Console → Realtime Database).');
+      }
+    }, 12000);
+  }catch(e){ console.warn('[PRESENCE] pemantau koneksi gagal dipasang:', e && e.message); }
+}
+
+// Daftar orang lain yang sedang aktif. Diri sendiri tidak ikut — namanya sudah
+// tertulis di topbar sebelah kiri, jadi kalau ditampilkan lagi malah bingung.
+function _presOrangLain(){
+  const aku = session && session.username;
+  const out = [];
+  Object.keys(_presData).forEach(u=>{
+    if(u === aku) return;
+    const kon = _presData[u]; if(!kon || typeof kon !== 'object') return;
+    const sesi = Object.keys(kon).map(k=>kon[k]).filter(x=>x && typeof x === 'object');
+    if(!sesi.length) return;
+    out.push({ u, n: sesi[0].n || u,
+               hp: sesi.some(x=>x.d==='hp'), pc: sesi.some(x=>x.d==='pc') });
+  });
+  out.sort((a,b)=>String(a.n).localeCompare(String(b.n)));
+  return out;
+}
+
+function renderPresensi(){
+  const wrap = document.getElementById('pres-wrap');
+  const avs  = document.getElementById('pres-avs');
+  const num  = document.getElementById('pres-num');
+  if(!wrap || !avs || !num) return;
+  const orang = _presOrangLain();
+  wrap.classList.toggle('ada', orang.length > 0);
+  if(!orang.length){
+    avs.innerHTML=''; num.textContent=''; tutupPresensi();
+    // Belum ada rekan lain. Tapi kalau entri KITA SENDIRI sudah terbaca balik
+    // dari Firebase, berarti seluruh jalurnya hidup — tulis berhasil, Rules
+    // mengizinkan, listener menerima. Tandanya ditampilkan supaya "jalan tapi
+    // sendirian" tidak tertukar dengan "tidak jalan sama sekali".
+    const aku = session && session.username;
+    const akuTerbaca = !!(aku && _presData[aku]);
+    num.className = akuTerbaca ? 'pres-solo' : 'pres-num';
+    num.textContent = akuTerbaca ? '● hanya Anda' : '';
+    return;
+  }
+  num.className = 'pres-num';
+  const tampil = orang.slice(0, _PRES_MAKS);
+  const sisa   = orang.length - tampil.length;
+  avs.innerHTML = tampil.map(o =>
+      '<div class="pres-av" style="background:'+_warnaDari(o.u)+'" title="'+esc(o.n)+'">'+esc(_inisial(o.n))+'</div>'
+    ).join('') + (sisa > 0 ? '<div class="pres-av lbh" title="'+esc(orang.slice(_PRES_MAKS).map(x=>x.n).join(', '))+'">+'+sisa+'</div>' : '');
+  num.innerHTML = '👥 ' + orang.length;
+  const pop = document.getElementById('pres-pop');
+  if(pop) isiPopPresensi(pop, orang);   // popup terbuka → ikut diperbarui
+}
+
+function isiPopPresensi(pop, orang){
+  pop.innerHTML = '<div class="pres-pop-h">' + orang.length + ' REKAN SEDANG AKTIF</div>' +
+    orang.map(o=>
+      '<div class="pres-row">'
+      + '<div class="pres-av" style="background:'+_warnaDari(o.u)+'">'+esc(_inisial(o.n))+'</div>'
+      + '<span class="pres-nm">'+esc(o.n)+'</span>'
+      + '<span class="pres-dv">'+(o.hp && o.pc ? 'HP + PC' : (o.hp ? 'HP' : 'PC'))+'</span>'
+      + '</div>').join('');
+}
+
+function togglePresensi(ev){
+  if(ev) ev.stopPropagation();
+  const wrap = document.getElementById('pres-wrap'); if(!wrap) return;
+  if(document.getElementById('pres-pop')){ tutupPresensi(); return; }
+  const orang = _presOrangLain(); if(!orang.length) return;
+  const pop = document.createElement('div');
+  pop.className = 'pres-pop'; pop.id = 'pres-pop';
+  pop.onclick = e => e.stopPropagation();
+  isiPopPresensi(pop, orang);
+  wrap.appendChild(pop);
+}
+function tutupPresensi(){
+  const p = document.getElementById('pres-pop');
+  if(p && p.parentNode) p.parentNode.removeChild(p);
+}
+document.addEventListener('click', ()=>tutupPresensi());
+
+/* ============================================================
+   KELUAR OTOMATIS KALAU LAMA TIDAK DIPAKAI
+
+   Masalahnya: sesi app ini disimpan di localStorage, jadi sekali login akan
+   tetap login selamanya. Di gudang satu HP dipakai bergantian, dan dokumentasi
+   bisa tercatat atas nama orang yang sudah pulang.
+
+   Aturannya satu, dan sengaja dibuat sekaku ini:
+   HITUNGAN MUNDUR HANYA BERJALAN DI LAYAR UTAMA SAAT TIDAK ADA SO TERBUKA.
+   SO yang sedang dikerjakan tidak pernah diputus di tengah jalan — packer bisa
+   saja berdiri lama memotret koli tanpa menyentuh layar sama sekali.
+
+   Dipakai tenggat waktu + pemeriksaan berkala, bukan setTimeout tunggal:
+   setTimeout dicekik browser saat tab di latar belakang dan berhenti total saat
+   HP tidur, jadi 30 menit versi setTimeout bisa jadi 2 jam versi jam dinding.
+   Membandingkan Date.now() tidak bisa tertipu seperti itu.
+
+   Yang TIDAK dikerjakan di sini: clearProgress(). Foto yang belum terkirim
+   tersimpan di IndexedDB dan harus selamat melewati logout — begitu packer
+   login lagi, restoreProgressIfAny() mengembalikannya utuh.
+   ============================================================ */
+const IDLE_MS = 30*60*1000;   // 30 menit
+let _idleSampai = Date.now() + IDLE_MS;
+let _idleTimer = null;
+
+function _idleBolehKeluar(){
+  if(!session) return false;
+  if(currentSO) return false;                       // SO terbuka → jangan diganggu
+  const m = document.getElementById('main-screen');
+  return !!(m && m.classList.contains('active'));   // hanya layar utama
+}
+function resetIdle(){ _idleSampai = Date.now() + IDLE_MS; }
+function _idlePeriksa(){
+  // Di luar layar utama atau saat SO terbuka, tenggatnya terus didorong maju,
+  // supaya begitu packer kembali ke layar utama hitungannya mulai dari nol —
+  // bukan langsung habis karena "sudah 2 jam tidak di layar utama".
+  if(!_idleBolehKeluar()){ resetIdle(); return; }
+  if(Date.now() >= _idleSampai) keluarOtomatis();
+}
+function mulaiPantauIdle(){
+  if(_idleTimer) return;
+  resetIdle();
+  _idleTimer = setInterval(_idlePeriksa, 30*1000);
+}
+function keluarOtomatis(){
+  resetIdle();                       // jangan sampai terpicu dua kali
+  if(!session) return;
+  const nama = session.name || session.username;
+  doLogout(true);
+  const el = document.getElementById('login-err');
+  if(el){
+    el.textContent = nama + ' keluar otomatis setelah 30 menit tanpa aktivitas. Silakan masuk lagi.';
+    el.classList.add('show');
+  }
+  showToast('Keluar otomatis setelah 30 menit tanpa aktivitas.');
+}
+['click','touchstart','keydown'].forEach(ev=>
+  document.addEventListener(ev, resetIdle, {passive:true}));
+// Kembali ke tab/HP menyala: PERIKSA tenggat dulu, baru reset. Kalau langsung
+// direset, HP yang ditinggal berjam-jam (layar mati, timer berhenti) akan
+// "hidup kembali" dengan tenggat segar dan tetap login sebagai orang sebelumnya.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) return;
+  _idlePeriksa();
+  resetIdle();
+});
+
+/* ============================================================
+   LOCK SYSTEM — cegah SO dikerjakan 2 tim bersamaan / diulang
+   ============================================================ */
+const LOCK_TTL = 30*60*1000; // 30 menit
+let hbTimer = null;
+let _lastActive = Date.now();
+function startHB(so){
+  stopHB();
+  hbTimer = setInterval(()=>{
+    if(currentSO && session){ db.ref('locks/'+currentSO).update({at:Date.now(), name:session.name}).catch(()=>{}); }
+  }, 5*60*1000);
+}
+function stopHB(){ if(hbTimer){ clearInterval(hbTimer); hbTimer=null; } }
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && currentSO && session && db){
+    db.ref('locks/'+currentSO).update({at:Date.now(), name:session.name}).catch(()=>{});
+    if(!hbTimer) startHB(currentSO);
+  }
+});
+function _refreshLockIfStale(){
+  const now = Date.now();
+  if(now - _lastActive > 60000 && currentSO && session && db){
+    db.ref('locks/'+currentSO).update({at:now, name:session.name}).catch(()=>{});
+    if(!hbTimer) startHB(currentSO);
+  }
+  _lastActive = now;
+}
+document.addEventListener('click', _refreshLockIfStale);
+document.addEventListener('touchstart', _refreshLockIfStale);
+window.addEventListener('beforeunload', ()=>{
+  if(currentSO && db){ db.ref('locks/'+currentSO).remove().catch(()=>{}); }
+});
+let scanCodeReader = null;
+async function openScanModal(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showToast('Kamera live tidak tersedia. App ini kemungkinan dibuka bukan lewat HTTPS — perlu di-hosting (mis. Vercel) dulu, kamera live tidak jalan dari file lokal.');
+    return;
+  }
+  document.getElementById('scan-modal').style.display = 'flex';
+  try{
+    scanCodeReader = new ZXing.BrowserMultiFormatReader();
+    scanCodeReader.decodeFromVideoDevice(undefined, 'scan-video', (result, err) => {
+      if(result){
+        document.getElementById('so-input').value = result.getText();
+        showToast('Terbaca: '+result.getText());
+        closeScanModal();
+      }
+    });
+  }catch(e){
+    showToast('Tidak bisa akses kamera. Pastikan izin kamera diizinkan di browser.');
+    closeScanModal();
+  }
+}
+function closeScanModal(){
+  if(scanCodeReader){ scanCodeReader.reset(); scanCodeReader = null; }
+  document.getElementById('scan-modal').style.display = 'none';
+}
+
+function addKoli(){
+  koliCounter++;
+  koliState[koliCounter] = {status:'open', photos:[]};
+  activeTab = 'koli-'+koliCounter;
+  renderAll();
+}
+function switchTab(tab){ activeTab = tab; renderAll(); }
+function unsealKoli(k){ koliState[k].status = 'open'; renderAll(); }
+function finishKoli(k){ koliState[k].status = 'done'; renderAll(); }
+function deleteKoli(k){
+  if(Object.keys(koliState).length <= 1){ showToast('Tidak bisa dihapus — minimal harus ada 1 koli.'); return; }
+  if(!confirm('Hapus Koli '+k+'? Foto yang sudah diambil di koli ini akan hilang.')) return;
+  delete koliState[k];
+  if(activeTab === 'koli-'+k){
+    const remaining = Object.keys(koliState).sort((a,b)=>a-b);
+    activeTab = 'koli-'+remaining[0];
+  }
+  renderAll();
+}
+
+function renderAll(){
+  const tabsEl = document.getElementById('tabs-row');
+  let html = '';
+  Object.keys(koliState).sort((a,b)=>a-b).forEach(k=>{
+    const st = koliState[k];
+    const cls = 'tab'+(activeTab==='koli-'+k?' active':'')+(st.status==='done'?' done':'');
+    html += `<div class="${cls}" onclick="switchTab('koli-${k}')">Koli ${k}</div>`;
+  });
+  html += `<div class="tab addkoli" onclick="addKoli()">+ Koli</div>`;
+  html += `<div class="tab total${activeTab==='total'?' active':''}" onclick="switchTab('total')">Total koli</div>`;
+  tabsEl.innerHTML = html;
+
+  const panel = document.getElementById('panel-area');
+  if(activeTab === 'total'){
+    panel.innerHTML = `
+      <div class="panel">
+        <div class="panel-hdr"><span class="ttl">Foto total koli (semua koli sudah dipacking)</span></div>
+        <div class="thumbs">
+          ${totalKoliPhotos.map((p,i)=>`
+            <div class="thumb" onclick="openPreview('total',null,${i})"><img src="${p.dataUrl}"><span class="lbl">${i+1}</span>
+              <button class="del" onclick="event.stopPropagation();delTotalPhoto('${p.id}')">×</button>
+            </div>`).join('')}
+        </div>
+        ${totalKoliPhotos.length===0 ? '<div class="empty-hint">Wajib diisi minimal 1 foto</div>' : ''}
+        <button class="btn ghost" onclick="captureFor('total', null)">+ Tambah foto</button>
+      </div>`;
+  } else if(activeTab && activeTab.startsWith('koli-')){
+    const k = activeTab.split('-')[1];
+    const st = koliState[k];
+    if(!st){ panel.innerHTML=''; return; }
+    const editable = st.status === 'open';
+    panel.innerHTML = `
+      <div class="panel">
+        <div class="panel-hdr">
+          <span class="ttl">Koli ${k}</span>
+          <span class="status ${st.status==='done'?'st-done':'st-open'}">${st.status==='done'?'Selesai':'Belum selesai'}</span>
+        </div>
+        <div class="thumbs">
+          ${st.photos.map((p,i)=>`
+            <div class="thumb" onclick="openPreview('layer','${k}',${i})"><img src="${p.dataUrl}">
+              <span class="lbl">Layer ${i+1}</span>
+              ${editable?`<button class="del" onclick="event.stopPropagation();delPhoto('${k}','${p.id}')">×</button>`:''}
+            </div>`).join('')}
+        </div>
+        ${st.photos.length===0 ? '<div class="empty-hint">Belum ada foto layer</div>' : ''}
+        ${editable ? `
+        <div class="actrow" style="margin-bottom:8px">
+          <button class="btn sm ghost" onclick="captureFor('layer','${k}')">+ Tambah foto layer</button>
+        </div>
+        <button class="btn pink" onclick="finishKoli('${k}')" ${st.photos.length===0?'disabled':''}>Selesaikan koli ini</button>
+        <button class="btn ghost" style="color:var(--re);border-color:var(--rbd);margin-top:8px" onclick="deleteKoli('${k}')">Hapus koli ini</button>
+        ` : `
+        <button class="btn ghost" onclick="unsealKoli('${k}')">Buka kunci &amp; edit lagi</button>
+        <button class="btn ghost" style="color:var(--re);border-color:var(--rbd);margin-top:8px" onclick="deleteKoli('${k}')">Hapus koli ini</button>
+        `}
+      </div>`;
+  }
+  const allKoliDone = Object.keys(koliState).length>0 && Object.values(koliState).every(s=>s.status==='done');
+  document.getElementById('btn-finish-so').disabled = !(allKoliDone && totalKoliPhotos.length>0);
+  saveProgress();
+}
+/* ── PREVIEW FOTO ─────────────────────────────────────────────
+   Tap foto di kotak mana pun → tampil penuh. Geser kiri/kanan atau
+   pakai tombol ‹ › untuk pindah antar foto dalam koli yang sama
+   (atau antar foto Total Koli). Hanya melihat — tidak mengubah apa pun. */
+let _pv = {list:[], i:0};
+function openPreview(scope, koli, idx){
+  let list = [];
+  if(scope === 'total'){
+    list = totalKoliPhotos.map((p,i)=>({src:p.dataUrl, label:'Foto Total Koli · '+(i+1)+' dari '+totalKoliPhotos.length}));
+  } else {
+    const st = koliState[koli]; if(!st) return;
+    list = st.photos.map((p,i)=>({src:p.dataUrl, label:'Koli '+koli+' · Layer '+(i+1)+' dari '+st.photos.length}));
+  }
+  if(!list.length) return;
+  _pv = {list, i:Math.min(Math.max(idx,0), list.length-1)};
+  document.getElementById('photo-viewer').style.display = 'flex';
+  showPreview();
+}
+function showPreview(){
+  const it = _pv.list[_pv.i]; if(!it) return;
+  document.getElementById('pv-img').src = it.src;
+  document.getElementById('pv-label').textContent = it.label;
+  const multi = _pv.list.length > 1;
+  document.getElementById('pv-prev').style.display = multi ? 'flex' : 'none';
+  document.getElementById('pv-next').style.display = multi ? 'flex' : 'none';
+}
+function stepPreview(d){
+  const n = _pv.list.length; if(n < 2) return;
+  _pv.i = (_pv.i + d + n) % n;
+  showPreview();
+}
+function closePreview(){
+  document.getElementById('photo-viewer').style.display = 'none';
+  document.getElementById('pv-img').removeAttribute('src');
+  _pv = {list:[], i:0};
+}
+(function(){
+  const v = document.getElementById('photo-viewer'); let x0 = null;
+  v.addEventListener('touchstart', e=>{ x0 = e.touches[0].clientX; }, {passive:true});
+  v.addEventListener('touchend', e=>{
+    if(x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if(Math.abs(dx) > 50) stepPreview(dx < 0 ? 1 : -1);
+  }, {passive:true});
+  document.addEventListener('keydown', e=>{
+    if(v.style.display !== 'flex') return;
+    if(e.key === 'Escape') closePreview();
+    else if(e.key === 'ArrowLeft') stepPreview(-1);
+    else if(e.key === 'ArrowRight') stepPreview(1);
+  });
+})();
+
+function delPhoto(koli, id){
+  koliState[koli].photos = koliState[koli].photos.filter(p=>p.id!==id);
+  renderAll();
+}
+function delTotalPhoto(id){
+  totalKoliPhotos = totalKoliPhotos.filter(p=>p.id!==id);
+  renderAll();
+}
+
+function captureFor(scope, koli){
+  cameraTarget = {scope, koli};
+  document.getElementById('camera-input').value = '';
+  document.getElementById('camera-input').click();
+}
+document.getElementById('camera-input').addEventListener('change', async function(){
+  const file = this.files[0];
+  if(!file || !cameraTarget) return;
+  const {dataUrl, w, h} = await compressImage(file, 1280, 0.65);
+  const rec = {id:'p'+Date.now()+Math.random().toString(36).slice(2,7), dataUrl, w, h, at:Date.now()};
+  const {scope, koli} = cameraTarget;
+  if(scope === 'layer'){ koliState[koli].photos.push(rec); }
+  else if(scope === 'total'){ totalKoliPhotos.push(rec); }
+  renderAll();
+});
+function compressImage(file, maxW, quality){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = e => { img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width*scale); c.height = Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      resolve({dataUrl: c.toDataURL('image/jpeg', quality), w: c.width, h: c.height});
+    }; img.src = e.target.result; };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ============================================================
+   FINISH SO — gabung jadi 1 PDF, kirim 1x
+   ============================================================ */
+async function buildPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm', format:'a4'});
+  let first = true;
+  const totalKoli = Object.keys(koliState).length;
+  const fmtDT = (ts) => {
+    const d = new Date(ts||Date.now());
+    const pad = n => String(n).padStart(2,'0');
+    return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+'  '+pad(d.getHours())+':'+pad(d.getMinutes());
+  };
+  const addPage = (item, lastValue) => {
+    if(!first) doc.addPage();
+    first = false;
+    doc.setFontSize(10);
+    let y = 14;
+    const lineH = 5.5;
+    const labelRightX = 58;
+    const rows = [
+      ['SO', currentSO],
+      ['Packer', session.name],
+      ['Tanggal & Jam packing', fmtDT(item.at)],
+      ['Total Koli', String(totalKoli)],
+      ['Koli & Layer', lastValue]
+    ];
+    rows.forEach(([label,value])=>{
+      doc.text(label, labelRightX, y, {align:'right'});
+      // Nilai panjang dibungkus ke baris berikutnya, bukan terpotong di tepi kertas.
+      const baris = doc.splitTextToSize(': '+String(value), 195-(labelRightX+3));
+      baris.forEach(b=>{ doc.text(b, labelRightX+3, y); y += lineH; });
+    });
+    const capTop = y + 4;
+    const maxW = 190, maxH = 297 - capTop - 10;
+    let w = maxW, h = (item.h/item.w)*w;
+    if(h > maxH){ h = maxH; w = (item.w/item.h)*h; }
+    const x = (210 - w)/2;
+    doc.addImage(item.dataUrl, 'JPEG', x, capTop, w, h);
+  };
+  Object.keys(koliState).sort((a,b)=>a-b).forEach(k=>{
+    const st = koliState[k];
+    st.photos.forEach((p,i)=> addPage(p, 'Koli - '+k+' & Layer - '+(i+1)));
+  });
+  totalKoliPhotos.forEach((p)=> addPage(p, 'Foto Total Koli ('+totalKoli+' koli)'));
+  return doc.output('datauristring');
+}
+async function finishSO(){
+  if(!confirm('Kirim dokumentasi SO '+currentSO+'? Setelah ini tidak bisa diubah.')) return;
+  showToast('Membuat PDF dokumentasi...');
+  const pdfDataUri = await buildPdf();
+  enqueueUpload({so:currentSO, packerUsername:session.username, packerName:session.name, pdfBase64:pdfDataUri, ts:Date.now()});
+  await db.ref('packingLog/'+currentSO+'_'+Date.now()).set({
+    soNumber: currentSO, packerUsername: session.username, packerName: session.name,
+    koliCount: Object.keys(koliState).length, completedAt: Date.now(), status:'completed'
+  });
+  await db.ref('completedSO/'+currentSO).set({
+    packerUsername: session.username, packerName: session.name,
+    koliCount: Object.keys(koliState).length, completedAt: Date.now()
+  });
+  db.ref('locks/'+currentSO).remove().catch(()=>{});
+  stopHB();
+  showToast('SO '+currentSO+' selesai. PDF sedang diupload di latar belakang.');
+  currentSO=null; koliState={}; totalKoliPhotos=[]; activeTab=null;
+  clearProgress();
+  document.getElementById('so-active-section').style.display='none';
+  setManualBox(true);
+  processQueue();
+}
+
+/* ============================================================
+   UPLOAD QUEUE — IndexedDB, 1 item = 1 PDF per SO
+   ============================================================ */
+let idb = null;
+function initQueueDB(){
+  return new Promise((resolve)=>{
+    const req = indexedDB.open('pd_queue_db', 2);
+    req.onupgradeneeded = e => {
+      const dbi = e.target.result;
+      if(!dbi.objectStoreNames.contains('queue')) dbi.createObjectStore('queue', {keyPath:'qid'});
+      if(!dbi.objectStoreNames.contains('progress')) dbi.createObjectStore('progress', {keyPath:'key'});
+    };
+    req.onsuccess = e => { idb = e.target.result; resolve(); };
+    req.onerror = () => resolve();
+  });
+}
+function saveProgress(){
+  if(!idb || !currentSO) return;
+  try{
+    const tx = idb.transaction('progress','readwrite');
+    tx.objectStore('progress').put({
+      key:'current', so:currentSO, koliState, totalKoliPhotos, koliCounter, activeTab,
+      username: session ? session.username : null, savedAt: Date.now()
+    });
+  }catch(e){}
+}
+function clearProgress(){
+  if(!idb) return;
+  try{ const tx = idb.transaction('progress','readwrite'); tx.objectStore('progress').delete('current'); }catch(e){}
+}
+function loadProgress(){
+  return new Promise((resolve)=>{
+    if(!idb){ resolve(null); return; }
+    try{
+      const tx = idb.transaction('progress','readonly');
+      const req = tx.objectStore('progress').get('current');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    }catch(e){ resolve(null); }
+  });
+}
+function enqueueUpload(item){
+  item.qid = 'q'+Date.now()+Math.random().toString(36).slice(2,8);
+  const tx = idb.transaction('queue','readwrite');
+  tx.objectStore('queue').add(item);
+  renderQueuePill();
+}
+function getQueueAll(){
+  return new Promise((resolve)=>{
+    const tx = idb.transaction('queue','readonly');
+    const req = tx.objectStore('queue').getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
+  });
+}
+function removeFromQueue(qid){
+  return new Promise(res=>{
+    const tx = idb.transaction('queue','readwrite');
+    tx.objectStore('queue').delete(qid);
+    tx.oncomplete = tx.onerror = tx.onabort = ()=>res();
+  });
+}
+// Ubah sebagian isi satu item antrean (mis. catat alasan gagal).
+function updateQueueItem(qid, patch){
+  return new Promise(res=>{
+    try{
+      const tx = idb.transaction('queue','readwrite');
+      const st = tx.objectStore('queue');
+      const g = st.get(qid);
+      g.onsuccess = ()=>{ if(g.result) st.put(Object.assign(g.result, patch)); };
+      tx.oncomplete = tx.onerror = tx.onabort = ()=>res();
+    }catch(e){ res(); }
+  });
+}
+// Perkiraan ukuran PDF (byte) dari data base64-nya.
+function _ukuranItem(it){
+  const b = String(it.pdfBase64||''); const i = b.indexOf(',');
+  const n = b.length - (i+1);
+  return Math.max(0, Math.floor(n*3/4));
+}
+const _fmtMB = n => (n/1048576).toFixed(1)+' MB';
+let _uploading = false;
+// Alasan yang BUKAN gangguan jaringan: server membaca kiriman dan menolaknya. Dicoba
+// ulang otomatis pun hasilnya sama, jadi tidak dicoba lagi sampai ada yang memperbaiki.
+const _UPLOAD_PERMANEN = ['ukuran PDF terlalu besar','unauthorized','payload tidak lengkap'];
+function _pesanUpload(mentah){
+  if(mentah === 'ukuran PDF terlalu besar') return 'PDF terlalu besar untuk server — melebihi batas ukuran (MAX_PDF_BYTES) di script GAS.';
+  if(mentah === 'unauthorized') return 'Kode rahasia di app tidak sama dengan di script GAS.';
+  if(mentah === 'payload tidak lengkap') return 'Data kiriman tidak lengkap.';
+  return mentah;
+}
+async function _tandaiGagal(item, pesan, permanen){
+  const n = (item.attempts||0) + 1;
+  // jeda antar percobaan makin panjang: 30 dtk, 1, 2, 4 … maksimal 30 menit
+  const jeda = Math.min(30*60*1000, 30*1000 * Math.pow(2, n-1));
+  await updateQueueItem(item.qid, {attempts:n, lastError:pesan, lastTry:Date.now(), permanen:!!permanen, nextTry: permanen ? 0 : Date.now()+jeda});
+}
+
+// force=true: abaikan jeda & penanda "permanen" (tombol Coba lagi). onlyQid: hanya satu item.
+async function processQueue(force, onlyQid){
+  if(_uploading || !navigator.onLine || !idb) return;
+  _uploading = true;
+  let gagalJaringan = 0;
+  try{
+    let items = await getQueueAll();
+    // Yang kecil duluan: satu PDF raksasa tidak boleh menahan yang lain.
+    items.sort((a,b)=>_ukuranItem(a)-_ukuranItem(b));
+    for(const item of items){
+      if(onlyQid && item.qid !== onlyQid) continue;
+      if(!force && item.permanen) continue;
+      if(!force && item.nextTry && item.nextTry > Date.now()) continue;
+      let resp, teks;
+      try{
+        resp = await fetch(window._cfg.gasUrl, {
+          method:'POST',
+          body: JSON.stringify({
+            secret: window._cfg.secret, so:item.so,
+            packerUsername:item.packerUsername, packerName:item.packerName,
+            pdfBase64:item.pdfBase64, ts:item.ts
+          })
+        });
+        teks = await resp.text();
+      }catch(e){
+        // Tidak ada jawaban sama sekali: koneksi putus / diputus server.
+        await _tandaiGagal(item, 'Koneksi ke server terputus ('+((e && e.message) || e)+').', false);
+        if(++gagalJaringan >= 2) break;    // jaringan memang bermasalah — jangan menghujani
+        continue;
+      }
+      gagalJaringan = 0;
+      let j = null; try{ j = JSON.parse(teks); }catch(_){}
+      if(j && j.ok){ await removeFromQueue(item.qid); showToast('SO '+item.so+' berhasil terupload'); continue; }
+      const mentah = j ? (j.error || 'ditolak server')
+                       : 'Jawaban server bukan JSON (HTTP '+resp.status+') — URL/deployment GAS mungkin berubah atau akses bukan "Anyone".';
+      // Item ini ditolak, tetapi yang berikutnya TETAP dicoba.
+      await _tandaiGagal(item, _pesanUpload(mentah), _UPLOAD_PERMANEN.indexOf(mentah) >= 0);
+    }
+  } finally { _uploading = false; renderQueuePill(); if(_qPanelBuka) renderQueuePanel(); }
+}
+async function renderQueuePill(){
+  if(!idb) return;
+  const items = await getQueueAll();
+  const pill = document.getElementById('queue-pill');
+  if(items.length){ pill.style.display='inline-block'; pill.textContent = items.length+' SO antre upload' + (items.some(x=>x.lastError) ? ' ⚠' : ''); }
+  else { pill.style.display='none'; }
+}
+let _qPanelBuka = false;
+function showQueueDetail(){ _qPanelBuka = true; document.getElementById('queue-modal').style.display='flex'; renderQueuePanel(); }
+function tutupQueuePanel(){ _qPanelBuka = false; document.getElementById('queue-modal').style.display='none'; }
+async function renderQueuePanel(){
+  if(!idb) return;
+  const items = (await getQueueAll()).sort((a,b)=>a.ts-b.ts);
+  document.getElementById('qm-title').textContent = 'Antrean upload (' + items.length + ')';
+  document.getElementById('qm-note').innerHTML = items.length
+    ? 'PDF di bawah ini <b>hanya tersimpan di HP ini</b> sampai berhasil terkirim. Jangan hapus data browser atau uninstall sebelum antrean kosong. Kalau terus gagal, tekan <b>Unduh PDF</b> untuk menyelamatkan filenya.'
+    : 'Tidak ada PDF yang menunggu. Semua sudah terkirim.';
+  document.getElementById('qm-all').style.display = items.length ? 'block' : 'none';
+  document.getElementById('qm-list').innerHTML = items.map(it=>{
+    let st;
+    if(it.lastError){
+      st = '<div class="qm-st err">Gagal ' + (it.attempts||1) + '× · terakhir ' + esc(fmtUmur(Date.now()-(it.lastTry||Date.now()))) + '<br>' + esc(it.lastError)
+         + '<br><span style="color:var(--t2)">' + (it.permanen ? 'Tidak dicoba otomatis lagi — tekan Coba lagi setelah masalahnya diperbaiki.' : 'Dicoba lagi otomatis.') + '</span></div>';
+    } else st = '<div class="qm-st">Menunggu giliran upload…</div>';
+    return '<div class="qm-item' + (it.lastError ? ' gagal' : '') + '">'
+      + '<div class="qm-h"><span class="qm-so">' + esc(it.so) + '</span><span class="qm-meta">' + _fmtMB(_ukuranItem(it)) + ' · dibuat ' + esc(fmtUmur(Date.now()-it.ts)) + '</span></div>'
+      + st
+      + '<div class="qm-btns">'
+      +   '<button class="pri" onclick="coba(\'' + esc(it.qid) + '\')">Coba lagi</button>'
+      +   '<button onclick="unduhAntrean(\'' + esc(it.qid) + '\')">Unduh PDF' + (it.diunduh ? ' ✓' : '') + '</button>'
+      +   '<button class="bahaya" ' + (it.diunduh ? '' : 'disabled title="Unduh PDF dulu supaya dokumennya tidak hilang"') + ' onclick="hapusAntrean(\'' + esc(it.qid) + '\')">Hapus</button>'
+      + '</div></div>';
+  }).join('');
+}
+async function coba(qid){
+  if(_uploading){ showToast('Sedang mengunggah — tunggu sebentar lalu coba lagi.'); return; }
+  if(!navigator.onLine){ showToast('Tidak ada koneksi internet.'); return; }
+  showToast('Mencoba mengirim…');
+  await processQueue(true, qid === 'all' ? null : qid);
+}
+async function unduhAntrean(qid){
+  const it = (await getQueueAll()).find(x=>x.qid===qid); if(!it) return;
+  try{
+    const blob = await (await fetch(it.pdfBase64)).blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = String(it.so).replace(/[^A-Za-z0-9-]/g,'') + '-' + String(it.packerName||'').replace(/[^A-Za-z0-9]/g,'') + '.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    await updateQueueItem(qid, {diunduh:true});
+    showToast('PDF diunduh — simpan filenya, lalu kirim ke admin kalau tetap gagal.');
+    renderQueuePanel();
+  }catch(e){ showToast('Gagal membuat file unduhan: '+((e && e.message) || e)); }
+}
+async function hapusAntrean(qid){
+  const it = (await getQueueAll()).find(x=>x.qid===qid); if(!it) return;
+  if(!it.diunduh){ showToast('Unduh PDF dulu sebelum menghapus.'); return; }
+  if(!confirm('Hapus SO '+it.so+' dari antrean?\n\nFile ini hilang dari HP. Lanjutkan hanya kalau PDF yang diunduh sudah tersimpan aman.')) return;
+  await removeFromQueue(qid); renderQueuePill(); renderQueuePanel();
+}
+
+/* ============================================================
+   DAFTAR SO SELESAI (semua akun) + lihat/buka-paksa lock (admin)
+   ============================================================ */
+function fmtDate(ts){
+  const d = new Date(ts);
+  return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+}
+async function openCompletedList(){
+  showScreen('completed-screen');
+  document.getElementById('cs-search').value = '';
+  loadRecentCompleted();
+  if(session.role === 'admin'){
+    document.getElementById('cs-locks-section').style.display = 'block';
+    loadActiveLocks();
+  } else {
+    document.getElementById('cs-locks-section').style.display = 'none';
+  }
+}
+function closeCompletedList(){ showScreen('main-screen'); }
+async function loadRecentCompleted(){
+  const el = document.getElementById('cs-list');
+  el.innerHTML = '<div class="empty-hint">Memuat...</div>';
+  const snap = await db.ref('completedSO').orderByChild('completedAt').limitToLast(50).once('value');
+  const data = snap.val() || {};
+  const rows = Object.entries(data).sort((a,b)=>b[1].completedAt-a[1].completedAt);
+  renderCompletedRows(rows);
+}
+async function searchCompletedSO(){
+  const v = soKanonik(document.getElementById('cs-search').value);
+  if(!v){ loadRecentCompleted(); return; }
+  const el = document.getElementById('cs-list');
+  el.innerHTML = '<div class="empty-hint">Mencari...</div>';
+  const snap = await db.ref('completedSO/'+v).once('value');
+  const val = snap.val();
+  renderCompletedRows(val ? [[v, val]] : []);
+}
+function renderCompletedRows(rows){
+  const el = document.getElementById('cs-list');
+  if(!rows.length){ el.innerHTML = '<div class="empty-hint">Tidak ditemukan</div>'; return; }
+  el.innerHTML = rows.map(([so,d])=>`
+    <div class="acc-row">
+      <div><div class="nm">${esc(so)}</div><div class="un">${esc(d.packerName)} · ${d.koliCount||0} koli · ${fmtDate(d.completedAt)}</div></div>
+    </div>`).join('');
+}
+async function loadActiveLocks(){
+  const el = document.getElementById('cs-locks-list');
+  el.innerHTML = '<div class="empty-hint">Memuat...</div>';
+  const snap = await db.ref('locks').once('value');
+  const data = snap.val() || {};
+  const now = Date.now();
+  const active = Object.entries(data).filter(([so,lk])=> lk && (now-lk.at) < LOCK_TTL);
+  if(!active.length){ el.innerHTML = '<div class="empty-hint">Tidak ada SO yang sedang dikerjakan</div>'; return; }
+  el.innerHTML = active.map(([so,lk])=>`
+    <div class="acc-row">
+      <div><div class="nm">${esc(so)}</div><div class="un">${esc(lk.name)} · sejak ${fmtDate(lk.at)}</div></div>
+      <button class="del-link" onclick="forceUnlockSO('${esc(so)}')">Paksa buka kunci</button>
+    </div>`).join('');
+}
+async function forceUnlockSO(so){
+  if(!confirm('Paksa buka kunci SO '+so+'? Pastikan tim yang tadi mengerjakan sudah benar-benar berhenti (HP mati/crash), bukan sedang aktif packing.')) return;
+  await db.ref('locks/'+so).remove();
+  showToast('Lock SO '+so+' dilepas');
+  loadActiveLocks();
+}
+
+initApp();
+document.getElementById('cs-search').addEventListener('keydown', e=>{ if(e.key==='Enter') searchCompletedSO(); });
+
+</script>
+</body>
+</html>
