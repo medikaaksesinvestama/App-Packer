@@ -1,7 +1,6 @@
 <!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
+<html lang="id"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -179,6 +178,14 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
 .bk-warn{font-size:11.5px;line-height:1.6;color:var(--am);background:var(--abg);border:1px solid var(--abd);border-radius:8px;padding:9px 11px;margin:8px 0}
 .bk-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .bk-btns .btn{flex:1;min-width:110px;margin:0}
+.rp-live{color:var(--g);font-size:11px;font-weight:700;margin-left:6px}
+.rp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.rp-card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:12px;text-align:center}
+.rp-card b{display:block;font-size:22px;font-family:var(--mono)}
+.rp-card span{font-size:11px;color:var(--t2)}
+.rp-bar{display:grid;grid-template-columns:78px 1fr 34px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
+.rp-bar i{display:block;height:10px;border-radius:5px;background:var(--pink);min-width:3px}
+.rp-bar b{font-family:var(--mono);text-align:right}
 </style>
 </head>
 <body>
@@ -246,6 +253,7 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
       <span class="net-pill net-online" id="net-pill">Online</span>
       <span class="queue-pill" id="queue-pill" style="display:none" onclick="showQueueDetail()">0 antre</span>
       <button class="icon-btn" onclick="openCompletedList()">SO Selesai</button>
+      <button class="icon-btn" onclick="openReport()" id="btn-report" style="display:none">Laporan</button>
       <button class="icon-btn" onclick="openAdmin()" id="btn-admin" style="display:none">Kelola Akun</button>
       <button class="icon-btn" onclick="doLogout()">Keluar</button>
     </div>
@@ -266,9 +274,10 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
         <span id="so-active-num">-</span>
         <span class="chg" onclick="closeSOInput()">Ganti SO</span>
       </div>
+      <div id="mode-row" style="text-align:right;font-size:12px;margin:6px 0"></div>
       <div class="tabs" id="tabs-row"></div>
       <div id="panel-area"></div>
-      <button class="btn pink" id="btn-finish-so" onclick="finishSO()" disabled>Selesaikan &amp; Kirim SO Ini</button>
+      <button class="btn pink" id="btn-finish-so" onclick="finishSO()" disabled="">Selesaikan &amp; Kirim SO Ini</button>
       <div class="finish-note">Aktif jika semua koli sudah disegel dan foto total koli sudah diisi</div>
     </div>
   </div>
@@ -294,9 +303,10 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
         Satu akun per baris: <b>username, nama lengkap, password</b>. Password boleh dikosongkan — akan dibuatkan otomatis.
         Bisa tempel langsung dari Excel (salin kolomnya) atau pilih file CSV. Semua akun baru berperan <b>packer</b> dan wajib ganti password saat login pertama.
       </div>
-      <textarea class="fi" id="bk-text" spellcheck="false" autocapitalize="none" placeholder="anto, Anto Dwi Prastowo&#10;budi, Budi Santoso, rahasia1"></textarea>
+      <textarea class="fi" id="bk-text" spellcheck="false" autocapitalize="none" placeholder="anto, Anto Dwi Prastowo
+budi, Budi Santoso, rahasia1"></textarea>
       <div class="bk-btns">
-        <label class="btn ghost sm" style="text-align:center;cursor:pointer">Pilih file CSV<input type="file" id="bk-file" accept=".csv,.txt,text/csv,text/plain" hidden onchange="bulkFile(this)"></label>
+        <label class="btn ghost sm" style="text-align:center;cursor:pointer">Pilih file CSV<input type="file" id="bk-file" accept=".csv,.txt,text/csv,text/plain" hidden="" onchange="bulkFile(this)"></label>
         <button class="btn ghost sm" onclick="bulkTemplate()">Unduh template</button>
       </div>
       <button class="btn pink" style="margin-top:10px" onclick="bulkPreview()">Periksa Data</button>
@@ -325,7 +335,7 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
     </div>
     <div class="section" id="cs-locks-section" style="display:none">
       <h3>SO Sedang Dikerjakan</h3>
-      <div id="cs-locks-list"></div>
+      <div id="cs-locks-list"><div class="empty-hint">Tidak ada SO yang sedang dikerjakan</div></div>
     </div>
     <div class="section">
       <h3>50 SO Terakhir Selesai</h3>
@@ -335,16 +345,37 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
 </div>
 
 <!-- ══════════════ EDIT AKUN ══════════════ -->
-<div id="edit-acc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;align-items:center;justify-content:center;padding:18px">
+<div id="report-screen" class="screen">
+  <div class="topbar">
+    <div class="who">Laporan Packing <span class="rp-live" id="rp-live">● live</span></div>
+    <button class="icon-btn" onclick="closeReport()">← Kembali</button>
+  </div>
+  <div class="wrap">
+    <div class="section">
+      <div class="scan-row">
+        <select class="fi" id="rp-range" onchange="_rpRange=this.value;_rpListen()">
+          <option value="today">Hari ini</option><option value="7">7 hari terakhir</option><option value="30">30 hari terakhir</option>
+        </select>
+        <button class="btn sm ghost" style="width:auto;margin:0" onclick="rpCsv()">Unduh CSV</button>
+      </div>
+    </div>
+    <div class="rp-cards" id="rp-cards"></div>
+    <div class="section"><h3>Per packer</h3><div id="rp-packer"></div></div>
+    <div class="section"><h3 id="rp-time-h">Per jam</h3><div id="rp-time"></div></div>
+    <div class="section"><h3>20 SO terbaru</h3><div id="rp-last"></div></div>
+  </div>
+</div>
+
+<div id="edit-acc-modal" style="display: none; position: fixed; inset: 0px; background: rgba(0, 0, 0, 0.45); z-index: 210; align-items: center; justify-content: center; padding: 18px;">
   <div class="card" style="margin:0;max-width:400px">
     <div class="ctitle" style="font-size:17px">Edit Akun</div>
-    <div class="csub" id="ea-sub" style="margin-bottom:16px"></div>
+    <div class="csub" id="ea-sub" style="margin-bottom:16px">@anggi</div>
     <div class="fl"><label>Username (tidak bisa diubah)</label>
-      <input class="fi" id="ea-user" disabled style="opacity:.55">
+      <input class="fi" id="ea-user" disabled="" style="opacity:.55">
     </div>
     <div class="fl"><label>Nama Lengkap</label><input class="fi" id="ea-name"></div>
     <div class="fl" id="ea-role-wrap"><label>Role</label>
-      <select class="fi" id="ea-role" style="background:var(--s2)">
+      <select class="fi" id="ea-role" style="background: var(--s2); opacity: 1;">
         <option value="packer">Packer</option>
         <option value="admin">Admin</option>
       </select>
@@ -361,7 +392,7 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
 </div>
 
 <input type="file" accept="image/*" capture="environment" class="file-input-hidden" id="camera-input">
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">Akun ditambahkan</div>
 
 <!-- ══════════════ ANTREAN UPLOAD ══════════════ -->
 <div id="queue-modal" onclick="if(event.target===this)tutupQueuePanel()">
@@ -386,7 +417,7 @@ textarea.fi{font-family:var(--mono);font-size:12px;resize:vertical}
 <!-- ══════════════ SCAN MODAL (live camera) ══════════════ -->
 <div id="scan-modal" style="display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column">
   <div style="position:relative;flex:1;overflow:hidden">
-    <video id="scan-video" style="width:100%;height:100%;object-fit:cover" autoplay playsinline muted></video>
+    <video id="scan-video" style="width:100%;height:100%;object-fit:cover" autoplay="" playsinline="" muted=""></video>
     <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none">
       <div style="width:78%;max-width:320px;aspect-ratio:1;border:3px solid #fff;border-radius:14px;opacity:.85"></div>
     </div>
@@ -407,6 +438,7 @@ let currentSO = null;
 let koliState = {};       // {1:{status:'open'|'done', photos:[{id,dataUrl,w,h}]}}
 let totalKoliPhotos = [];
 let koliCounter = 0;
+let totalOnlyN = 0;      // >0 = mode foto total saja (jumlah koli diketik, tanpa foto per koli)
 let activeTab = null;     // 'koli-1' | 'total'
 let cameraTarget = null;  // {scope:'layer'|'seal'|'total', koli}
 const _loginFails = {};
@@ -578,7 +610,7 @@ function doLogout(otomatis){
   setManualBox(false);
   // clearProgress() SENGAJA tidak dipanggil: foto yang belum terkirim harus
   // selamat melewati logout dan dipulihkan restoreProgressIfAny().
-  session=null; currentSO=null; koliState={}; totalKoliPhotos=[];
+  session=null; currentSO=null; koliState={}; totalKoliPhotos=[]; totalOnlyN=0;
   _presData={}; renderPresensi();
   resetIdle();
   const le = document.getElementById('login-err');
@@ -588,6 +620,7 @@ function doLogout(otomatis){
 function enterMain(){
   document.getElementById('tb-name').textContent = session.name+' (@'+session.username+')';
   document.getElementById('btn-admin').style.display = session.role==='admin' ? 'inline-block' : 'none';
+  document.getElementById('btn-report').style.display = session.role==='admin' ? 'inline-block' : 'none';
   showScreen('main-screen');
   setManualBox(true);
   renderQueuePill();
@@ -609,6 +642,7 @@ async function restoreProgressIfAny(){
   koliState = prog.koliState || {};
   totalKoliPhotos = prog.totalKoliPhotos || [];
   koliCounter = prog.koliCounter || Object.keys(koliState).length;
+  totalOnlyN = prog.totalOnlyN || 0;
   activeTab = prog.activeTab || ('koli-'+(Object.keys(koliState)[0]||1));
   document.getElementById('so-active-num').textContent = currentSO;
   setManualBox(false);
@@ -917,17 +951,18 @@ async function proceedOpenSO(so){
   startHB(so);
 
   currentSO = so;
-  koliState = {}; koliCounter = 0; totalKoliPhotos = [];
+  koliState = {}; koliCounter = 0; totalKoliPhotos = []; totalOnlyN = 0;
   document.getElementById('so-active-num').textContent = currentSO;
   setManualBox(false);
   document.getElementById('so-active-section').style.display='block';
   document.getElementById('so-input').value='';
-  addKoli();
+  koliState = {1:{status:'done', photos:[]}}; koliCounter = 1; totalOnlyN = 1; activeTab = 'total';
+  renderAll();
 }
 function closeSOInput(){
   if((Object.keys(koliState).length || totalKoliPhotos.length) && !confirm('SO ini belum dikirim. Yakin mau ganti tanpa submit? Foto yang sudah diambil akan hilang.')) return;
   if(currentSO){ db.ref('locks/'+currentSO).remove().catch(()=>{}); stopHB(); }
-  currentSO=null; koliState={}; totalKoliPhotos=[];
+  currentSO=null; koliState={}; totalKoliPhotos=[]; totalOnlyN=0;
   clearProgress();
   document.getElementById('so-active-section').style.display='none';
   setManualBox(true);
@@ -1256,6 +1291,28 @@ function deleteKoli(k){
   renderAll();
 }
 
+function _setJumlahKoli(n){
+  koliState = {};
+  for(let i=1;i<=n;i++) koliState[i] = {status:'done', photos:[]};
+  koliCounter = n; totalOnlyN = n;
+}
+function setTotalOnly(){
+  const n = Math.max(1, Object.keys(koliState).length);
+  const hasPhotos = Object.values(koliState).some(st=>st.photos.length>0);
+  if(hasPhotos && !confirm('Foto per koli yang sudah diambil akan dihapus; hanya foto total yang dipakai. Lanjutkan?')) return;
+  _setJumlahKoli(n); activeTab = 'total'; renderAll();
+}
+function ubahJumlahKoli(v){
+  const n = parseInt(String(v).trim(), 10);
+  if(!(n>=1 && n<=999)){ showToast('Jumlah koli: isi angka 1-999.'); renderAll(); return; }
+  _setJumlahKoli(n); renderAll();
+}
+function exitTotalOnly(){
+  if(!confirm('Kembali ke foto per koli? Jumlah koli akan diulang dari 1 koli kosong (foto total tetap dipertahankan).')) return;
+  totalOnlyN = 0; koliState = {1:{status:'open', photos:[]}}; koliCounter = 1; activeTab = 'koli-1';
+  renderAll();
+}
+
 function renderAll(){
   const tabsEl = document.getElementById('tabs-row');
   let html = '';
@@ -1267,12 +1324,21 @@ function renderAll(){
   html += `<div class="tab addkoli" onclick="addKoli()">+ Koli</div>`;
   html += `<div class="tab total${activeTab==='total'?' active':''}" onclick="switchTab('total')">Total koli</div>`;
   tabsEl.innerHTML = html;
+  const modeEl = document.getElementById('mode-row');
+  if(totalOnlyN > 0){
+    activeTab = 'total';
+    tabsEl.innerHTML = '<div class="tab total active">Total koli · '+totalOnlyN+' koli</div>';
+    modeEl.innerHTML = '<span class="chg" onclick="exitTotalOnly()">Pakai foto per koli</span>';
+  } else {
+    modeEl.innerHTML = '<span class="chg" onclick="setTotalOnly()">Pakai foto total saja</span>';
+  }
 
   const panel = document.getElementById('panel-area');
   if(activeTab === 'total'){
     panel.innerHTML = `
       <div class="panel">
-        <div class="panel-hdr"><span class="ttl">Foto total koli (semua koli sudah dipacking)</span></div>
+        <div class="panel-hdr"><span class="ttl">${totalOnlyN>0 ? 'Foto total ('+totalOnlyN+' koli)' : 'Foto total koli (semua koli sudah dipacking)'}</span></div>
+        ${totalOnlyN>0 ? '<div style="margin:10px 0"><label style="font-size:13px;font-weight:600">Jumlah koli</label> <input type="number" inputmode="numeric" min="1" max="999" value="'+totalOnlyN+'" onchange="ubahJumlahKoli(this.value)" class="fi" style="width:90px;display:inline-block;margin-left:8px"></div>' : ''}
         <div class="thumbs">
           ${totalKoliPhotos.map((p,i)=>`
             <div class="thumb" onclick="openPreview('total',null,${i})"><img src="${p.dataUrl}"><span class="lbl">${i+1}</span>
@@ -1459,7 +1525,7 @@ async function finishSO(){
   if(!confirm('Kirim dokumentasi SO '+currentSO+'? Setelah ini tidak bisa diubah.')) return;
   showToast('Membuat PDF dokumentasi...');
   const pdfDataUri = await buildPdf();
-  enqueueUpload({so:currentSO, packerUsername:session.username, packerName:session.name, pdfBase64:pdfDataUri, ts:Date.now()});
+  enqueueUpload({so:currentSO, packerUsername:session.username, packerName:session.name, pdfBase64:pdfDataUri, koliCount:Object.keys(koliState).length, ts:Date.now()});
   await db.ref('packingLog/'+currentSO+'_'+Date.now()).set({
     soNumber: currentSO, packerUsername: session.username, packerName: session.name,
     koliCount: Object.keys(koliState).length, completedAt: Date.now(), status:'completed'
@@ -1471,7 +1537,7 @@ async function finishSO(){
   db.ref('locks/'+currentSO).remove().catch(()=>{});
   stopHB();
   showToast('SO '+currentSO+' selesai. PDF sedang diupload di latar belakang.');
-  currentSO=null; koliState={}; totalKoliPhotos=[]; activeTab=null;
+  currentSO=null; koliState={}; totalKoliPhotos=[]; activeTab=null; totalOnlyN=0;
   clearProgress();
   document.getElementById('so-active-section').style.display='none';
   setManualBox(true);
@@ -1499,7 +1565,7 @@ function saveProgress(){
   try{
     const tx = idb.transaction('progress','readwrite');
     tx.objectStore('progress').put({
-      key:'current', so:currentSO, koliState, totalKoliPhotos, koliCounter, activeTab,
+      key:'current', so:currentSO, koliState, totalKoliPhotos, koliCounter, totalOnlyN, activeTab,
       username: session ? session.username : null, savedAt: Date.now()
     });
   }catch(e){}
@@ -1596,7 +1662,7 @@ async function processQueue(force, onlyQid){
           body: JSON.stringify({
             secret: window._cfg.secret, so:item.so,
             packerUsername:item.packerUsername, packerName:item.packerName,
-            pdfBase64:item.pdfBase64, ts:item.ts
+            pdfBase64:item.pdfBase64, koliCount:item.koliCount, ts:item.ts
           })
         });
         teks = await resp.text();
@@ -1742,9 +1808,50 @@ async function forceUnlockSO(so){
   loadActiveLocks();
 }
 
+/* ============================================================
+   LAPORAN — realtime dari completedSO (listener Firebase, bukan polling)
+   ============================================================ */
+let _rpRef=null,_rpData={},_rpRange='today',_rpRaf=0;
+function _rpStart(){const d=new Date();d.setHours(0,0,0,0);if(_rpRange==='7')d.setDate(d.getDate()-6);if(_rpRange==='30')d.setDate(d.getDate()-29);return d.getTime();}
+function openReport(){if(!session||session.role!=='admin')return;showScreen('report-screen');document.getElementById('rp-range').value=_rpRange;_rpListen();}
+function closeReport(){_rpStop();showScreen('main-screen');}
+function _rpStop(){if(_rpRef){_rpRef.off();_rpRef=null;}}
+function _rpListen(){
+  _rpStop();_rpData={};_rpRender();
+  _rpRef=db.ref('completedSO').orderByChild('completedAt').startAt(_rpStart());
+  const up=s=>{_rpData[s.key]=s.val();_rpSoon();};
+  _rpRef.on('child_added',up,e=>showToast('Gagal membaca laporan: '+((e&&e.message)||e)));
+  _rpRef.on('child_changed',up);
+  _rpRef.on('child_removed',s=>{delete _rpData[s.key];_rpSoon();});
+}
+function _rpSoon(){cancelAnimationFrame(_rpRaf);_rpRaf=requestAnimationFrame(_rpRender);}
+function _rpRows(){return Object.entries(_rpData).map(([so,d])=>({so,n:d.packerName||'-',u:d.packerUsername||'',k:d.koliCount||0,t:d.completedAt||0})).sort((a,b)=>b.t-a.t);}
+function _rpBars(map){
+  const ks=Object.keys(map),mx=Math.max(1,...ks.map(k=>map[k]));
+  return ks.map(k=>'<div class="rp-bar"><span>'+esc(k)+'</span><i style="width:'+Math.round(map[k]/mx*100)+'%"></i><b>'+map[k]+'</b></div>').join('')||'<div class="empty-hint">Belum ada data</div>';
+}
+function _rpRender(){
+  const el=document.getElementById('rp-cards'); if(!el) return;
+  const rows=_rpRows(), so=rows.length, koli=rows.reduce((a,r)=>a+r.k,0);
+  el.innerHTML='<div class="rp-card"><b>'+so+'</b><span>SO selesai</span></div><div class="rp-card"><b>'+koli+'</b><span>Total koli</span></div><div class="rp-card"><b>'+(so?(koli/so).toFixed(1):'0')+'</b><span>Koli / SO</span></div>';
+  const pk={}; rows.forEach(r=>{pk[r.n]=(pk[r.n]||0)+1;});
+  const pkSorted={}; Object.entries(pk).sort((a,b)=>b[1]-a[1]).forEach(([k,v])=>pkSorted[k]=v);
+  document.getElementById('rp-packer').innerHTML=_rpBars(pkSorted);
+  const pad=n=>String(n).padStart(2,'0'), tm={}, harian=_rpRange!=='today';
+  document.getElementById('rp-time-h').textContent=harian?'Per hari':'Per jam';
+  rows.slice().reverse().forEach(r=>{const d=new Date(r.t);const k=harian?pad(d.getDate())+'/'+pad(d.getMonth()+1):pad(d.getHours())+':00';tm[k]=(tm[k]||0)+1;});
+  document.getElementById('rp-time').innerHTML=_rpBars(tm);
+  document.getElementById('rp-last').innerHTML=rows.slice(0,20).map(r=>'<div class="acc-row"><div><div class="nm">'+esc(r.so)+'</div><div class="un">'+esc(r.n)+' · '+r.k+' koli · '+fmtDate(r.t)+'</div></div></div>').join('')||'<div class="empty-hint">Belum ada SO selesai pada periode ini</div>';
+}
+function rpCsv(){
+  const rows=_rpRows(); if(!rows.length){showToast('Belum ada data untuk diunduh.');return;}
+  _bkUnduhTeks('laporan-packing-'+new Date().toISOString().slice(0,10)+'.csv','waktu,no_so,packer,username,koli\r\n'+rows.map(r=>[fmtDate(r.t),r.so,r.n,r.u,r.k].map(_bkCsv).join(',')).join('\r\n')+'\r\n');
+}
+
 initApp();
 document.getElementById('cs-search').addEventListener('keydown', e=>{ if(e.key==='Enter') searchCompletedSO(); });
 
 </script>
-</body>
-</html>
+
+
+</body></html>
